@@ -1,0 +1,15 @@
+[package]
+name = "bak9"
+version = "0.0.1"
+edition = "2021"
+description = "Creates a backup .bak copy of a file"
+authors = ["Asmov LLC <development.pub@asmov.software>"]
+repository = "https://github.com/asmov/bak9"
+license = "GPL-3.0-or-later"
+keywords = ["backup", "copy"]
+categories = ["command-line-utilities", "filesystem"]
+
+[dependencies]
+clap = { version = "^4", features = ["derive"] }
+file_diff = "^1"
+
