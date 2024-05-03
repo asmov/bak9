@@ -1,5 +1,9 @@
 bak9
 ================================================================================
+[![Latest Version]][crates.io]
+
+[Latest Version]: https://img.shields.io/crates/v/bak9.svg
+[crates.io]: https://crates.io/crates/bak9
 
 Creates a backup `.bak` copy of a file.
 
