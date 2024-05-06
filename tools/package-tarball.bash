@@ -33,6 +33,8 @@ for target in "${RELEASE_TARGETS[@]}"; do
 
     cd "${package_dir}/.."
     tar cf "${package_dir_name}.tar.xz" --use-compress-program='xz -T0' "${package_dir_name}"
+
+    sha256sum -b "${package_dir_name}.tar.xz" > "${package_dir_name}.tar.xz.sha256"
 done
 
 echo "finished packaging tarballs"
