@@ -1,0 +1,33 @@
+name: bak9
+version: git
+summary: Creates a backup bak copy of a file
+description: |
+  Creates a backup `.bak` copy of a file.
+
+  Usage: bak [OPTION]... FILE [DIR]
+
+  If DIR is not specified, the copy is created in the same directory as FILE.
+
+  If multiple backups of FILE exist, the filename extension used will be `.bak.N`.
+
+  Pruning occurs after `-n NUM` backups. 
+
+base: core22
+confinement: classic
+
+architectures:
+  - build-on: amd64
+    build-for: amd64
+  - build-on: [amd64, arm64]
+    build-for: [arm64]
+  - build-on: [amd64, armhf]
+    build-for: [armhf]
+
+parts:
+  bak9:
+    plugin: rust
+    source: .
+
+apps:
+  bak9:
+    command: bin/bak
