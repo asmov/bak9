@@ -27,6 +27,8 @@ parts:
   bak9:
     plugin: rust
     source: .
+    build-attributes:
+      - enable-patchelf
 
 apps:
   bak9:

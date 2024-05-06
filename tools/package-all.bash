@@ -8,6 +8,7 @@ echo "began packaging everything"
 
 "${PROJECT_DIR}/tools/package-tarball.bash"
 "${PROJECT_DIR}/tools/package-debian.bash"
+"${PROJECT_DIR}/tools/package-snapcraft.bash"
 
 echo "finished packaging everything"
 
