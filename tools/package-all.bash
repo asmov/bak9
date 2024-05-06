@@ -7,6 +7,7 @@ PROJECT_DIR="$(realpath "$(dirname "$0")/..")"
 echo "began packaging everything"
 
 "${PROJECT_DIR}/tools/package-tarball.bash"
+"${PROJECT_DIR}/tools/package-debian.bash"
 
 echo "finished packaging everything"
 

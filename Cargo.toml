@@ -19,4 +19,3 @@ thiserror = "1"
 [dev-dependencies]
 function_name = "0"
 file_diff = "1"
-
