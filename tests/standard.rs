@@ -112,7 +112,24 @@ mod tests {
 
     #[test]
     #[named]
-    fn test_defaults() {
+    fn test_no_extension() {
+        let tmpdir = open_tmpdir(function_name!());
+
+        std::fs::write(tmpdir.join("no_extension"), "LINE 1").unwrap();
+        let result = bak9::run_with(bak9::cli::Cli {
+            file: tmpdir.join("no_extension"),
+            dir: None,
+            delete: false,
+            num: 3,
+        });
+        assert_eq!(true, result.is_ok());
+        assert_eq!(true, tmpfile_exists("no_extension.bak", function_name!()),
+            "no_extension should be created");
+    }
+ 
+    #[test]
+    #[named]
+    fn test_chain() {
         let tmpdir = open_tmpdir(function_name!());
 
         let result = bak9::run_with(bak9::cli::Cli {

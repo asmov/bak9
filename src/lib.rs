@@ -49,7 +49,11 @@ trait PathExt {
 
 impl PathExt for PathBuf {
     fn append_extension(self, ext: &str) -> PathBuf {
-        self.with_extension(format!("{}.{}", self.extension().unwrap_or_default().to_str().expect(E_STR), ext))
+        if let Some(prev_ext) = self.extension() {
+            self.with_extension(format!("{prev_ext}.{ext}", prev_ext = prev_ext.to_str().expect(E_STR)))
+        } else {
+            self.with_extension(ext)
+        }
     }
 
     fn filename_string(self) -> Option<String> {
@@ -72,7 +76,11 @@ impl PathExt for PathBuf {
 
 impl PathExt for &Path {
     fn append_extension(self, ext: &str) -> PathBuf {
-        self.with_extension(format!("{}.{}", self.extension().unwrap_or_default().to_str().expect(E_STR), ext))
+        if let Some(prev_ext) = self.extension() {
+            self.with_extension(format!("{prev_ext}.{ext}", prev_ext = prev_ext.to_str().expect(E_STR)))
+        } else {
+            self.with_extension(ext)
+        }
     }
 
     fn filename_string(self) -> Option<String> {
