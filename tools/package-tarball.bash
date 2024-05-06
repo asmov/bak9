@@ -26,9 +26,9 @@ for target in "${RELEASE_TARGETS[@]}"; do
     rsync -a "${TARBALL_TEMPLATE_DIR}/" "${package_dir}"
 
     if [[ "$target" != *"windows"* ]]; then
-        cp "${PROJECT_DIR}/target/${target}/release/${CARGO_NAME}" "${package_dir}"
+        cp "${PROJECT_DIR}/target/${target}/release/${CARGO_BIN_NAME}" "${package_dir}"
     else
-        cp "${PROJECT_DIR}/target/${target}/release/${CARGO_NAME}.exe" "${package_dir}"
+        cp "${PROJECT_DIR}/target/${target}/release/${CARGO_BIN_NAME}.exe" "${package_dir}"
     fi
 
     cd "${package_dir}/.."

@@ -1,6 +1,6 @@
 [package]
 name = "bak9"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2021"
 description = "Creates a backup .bak copy of a file"
 authors = ["Asmov LLC <development.pub@asmov.software>"]
@@ -8,6 +8,10 @@ repository = "https://github.com/asmov/bak9"
 license = "GPL-3.0-or-later"
 keywords = ["backup", "copy"]
 categories = ["command-line-utilities", "filesystem"]
+
+[[bin]]
+name = "bak"
+path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
