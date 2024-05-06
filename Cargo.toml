@@ -1,6 +1,6 @@
 [package]
 name = "bak9"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "Creates a backup .bak copy of a file"
 authors = ["Asmov LLC <development.pub@asmov.software>"]
