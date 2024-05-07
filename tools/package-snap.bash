@@ -13,7 +13,7 @@ rm -rf "${SNAP_DIR}"
 mkdir -p "${SNAP_DIR}"
 
 cd "${PROJECT_DIR}"
-rm -f "${PROJECT_DIR}/*.snap"
+rm -f "${PROJECT_DIR}"/*.snap"
 
 snapcraft
 

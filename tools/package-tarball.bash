@@ -23,6 +23,7 @@ for target in "${RELEASE_TARGETS[@]}"; do
     package_dir_name="${CARGO_NAME}_${CARGO_VERSION}_${target//_/-}"
     package_dir="${TARBALL_DIR}/${package_dir_name}"
     mkdir -p "${package_dir}"
+
     rsync -a "${TARBALL_TEMPLATE_DIR}/" "${package_dir}"
 
     if [[ "$target" != *"windows"* ]]; then
