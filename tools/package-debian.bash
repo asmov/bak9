@@ -2,6 +2,7 @@
 # Package Debian .deb files for all releases
 # Expects tools/build-release.bash to have been run
 set -euo pipefail
+shopt -s extglob
 PROJECT_DIR="$(realpath "$(dirname "$0")/..")"
 source "${PROJECT_DIR}/tools/common.lib.bash"
 
@@ -17,6 +18,10 @@ for target in "${RELEASE_TARGETS[@]}"; do
 
     echo "packaging .deb: ${target}"
     cargo deb --target "${target}" --no-build --output="${DEB_DIR}"
+done
+
+for deb in "${DEB_DIR}"/*.deb; do
+    sha256sum -b "${deb}" > "${deb}.sha256"
 done
  
  echo "finished packaging for Debian"

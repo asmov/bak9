@@ -16,4 +16,5 @@ RELEASE_TARGETS=(
 
 CARGO_NAME="$(grep -m1 '^name' "${PROJECT_DIR}/Cargo.toml" | cut -d '"' -f 2)"
 CARGO_VERSION="$(grep '^version' "${PROJECT_DIR}/Cargo.toml" | cut -d '"' -f 2)"
+CARGO_VERSION_EXT="${CARGO_VERSION}-1"
 CARGO_BIN_NAME="$(sed -n '/\[\[bin\]\]/,$p' "${PROJECT_DIR}/Cargo.toml" | grep '^name' | cut -d '"' -f 2)"

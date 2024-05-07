@@ -13,7 +13,7 @@ rm -rf "${SNAP_DIR}"
 mkdir -p "${SNAP_DIR}"
 
 cd "${PROJECT_DIR}"
-rm -f "${PROJECT_DIR}"/*.snap"
+rm -f "${PROJECT_DIR}"/*.snap
 
 snapcraft
 
@@ -22,5 +22,9 @@ mv "${PROJECT_DIR}"/*.snap "${SNAP_DIR}"
 mv "${SNAP_DIR}"/bak9_*_amd64.snap "${SNAP_DIR}/bak9_${CARGO_VERSION}_amd64.snap"
 mv "${SNAP_DIR}"/bak9_*_arm64.snap "${SNAP_DIR}/bak9_${CARGO_VERSION}_arm64.snap"
 mv "${SNAP_DIR}"/bak9_*_armhf.snap "${SNAP_DIR}/bak9_${CARGO_VERSION}_armhf.snap"
+
+for snap in "${SNAP_DIR}"/*.snap; do
+    sha256sum -b "${snap}" > "${snap}.sha256"
+done
 
 echo "finished packaging snaps"
