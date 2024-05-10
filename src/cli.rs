@@ -1,29 +1,57 @@
 use std::path::PathBuf;
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
-use crate::PathExt;
+use crate::{PathExt, E_STR};
 
 #[derive(Parser)]
 #[command(version, about)]
 pub struct Cli {
+    #[command(subcommand)]
+    pub subcommand: Option<Command>,
+
     #[arg(value_parser = validate_file)]
     pub file: PathBuf,
 
-    #[arg(value_parser = validate_dir, help = "If not specified, the backup is created in the same directory as FILE.")]
+    #[arg(value_parser = validate_dir, help = "[default: Same directory as FILE. '-': The user's app data directory]")]
     pub dir: Option<PathBuf>,
-
-    #[arg(short, default_value_t = false, help = "Delete all backups of FILE")]
-    pub delete: bool,
 
     #[arg(short, value_parser = clap::value_parser!(u8).range(1..),
         default_value_t = 10, help = "Number of backups to keep before pruning")]
     pub num: u8,
+
+    #[arg(short, help = "Force the operation without confirmation")]
+    pub force: bool,
+
+    #[arg(short, help = "Suppress all output")]
+    pub quiet: bool
+}
+
+
+#[derive(Subcommand)]
+pub enum Command {
+    #[command(name = "ls", about = "List all backups of FILE in DIR")]
+    List,
+    #[command(name = "rm", about = "Deletes all backups of FILE in DIR")]
+    Wipe, 
+    #[command(name = "diff", about = "Shows the differences between FILE and BAK.N")]
+    Diff {
+        #[arg(default_value_t = 0, help = "The BAK index to compare FILE with")]
+        index: u8,
+    }
 }
 
 impl Cli {
     pub fn dir(&self) -> PathBuf {
         match &self.dir {
-            Some(dir) => dir.clone(),
+            Some(dir) => {
+                // handle passing Cli parameters manually
+                if dir.to_str().expect(E_STR) == "-" {
+                    crate::os::user_app_data_dir(true, crate::BAK9.into())
+                        .expect("Failed to get user app data directory")
+                } else {
+                    dir.clone()
+                }
+            },
             None => self.file.parent().expect("Expected parent directory").to_path_buf().clone(),
         }
     }
@@ -53,7 +81,13 @@ fn validate_file(path: &str) -> Result<PathBuf, String> {
 }
 
 fn validate_dir(path: &str) -> Result<PathBuf, String> {
-    let path = validate_path(path, "Directory")?;
+    let path = if path == "-" {
+        crate::os::user_app_data_dir(true, crate::BAK9.into())
+            .map_err(|e| e.to_string())?
+    } else {
+        validate_path(path, "Directory")?
+    };
+
     if !path.is_dir() {
         return Err(format!("Destination path is not a directory: {:?}", path))
     } else {

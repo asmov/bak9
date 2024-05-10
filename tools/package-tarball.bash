@@ -18,6 +18,9 @@ cp "${PROJECT_DIR}/README.md" "${TARBALL_TEMPLATE_DIR}"
 cp "${PROJECT_DIR}/LICENSE.txt" "${TARBALL_TEMPLATE_DIR}"
 cp "${PROJECT_DIR}/COPYING.txt" "${TARBALL_TEMPLATE_DIR}"
 
+echo "packaging tarball: source"
+git archive --format tar.gz --prefix "${CARGO_NAME}_${CARGO_VERSION}/" HEAD > "${TARBALL_DIR}/${CARGO_NAME}_${CARGO_VERSION}.tar.gz"
+
 for target in "${RELEASE_TARGETS[@]}"; do
     echo "packaging tarball: ${target}"
     package_dir_name="${CARGO_NAME}_${CARGO_VERSION}_${target//_/-}"
@@ -39,7 +42,7 @@ done
 
 rm -rf "${TARBALL_TEMPLATE_DIR}"
 
-for tarball in "${TARBALL_DIR}"/*.tar.xz; do
+for tarball in "${TARBALL_DIR}"/*.tar.*; do
     sha256sum -b "${tarball}" > "${tarball}.sha256"
 done
 

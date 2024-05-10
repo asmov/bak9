@@ -14,6 +14,13 @@ RELEASE_TARGETS=(
   "${TARGET_WINDOWS_X86_64}"
 )
 
+LINUX_RELEASE_TARGETS=(
+  "${TARGET_LINUX_X86_64}"
+  "${TARGET_LINUX_ARM_64}"
+  "${TARGET_LINUX_ARM_V7}"
+)
+
+
 CARGO_NAME="$(grep -m1 '^name' "${PROJECT_DIR}/Cargo.toml" | cut -d '"' -f 2)"
 CARGO_VERSION="$(grep '^version' "${PROJECT_DIR}/Cargo.toml" | cut -d '"' -f 2)"
 CARGO_VERSION_EXT="${CARGO_VERSION}-1"

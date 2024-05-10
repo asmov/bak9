@@ -1,6 +1,6 @@
 [package]
 name = "bak9"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 description = "Creates a backup .bak copy of a file"
 authors = ["Asmov LLC <development.pub@asmov.software>"]
@@ -16,11 +16,6 @@ path = "src/main.rs"
 [profile.release]
 strip = "symbols"
 
-[package.metadata.generate-rpm]
-assets = [
-    { source = "target/release/bak", dest = "/usr/bin/bak", mode = "755" }
-]
-
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 colored = "2"
@@ -31,4 +26,12 @@ thiserror = "1"
 [dev-dependencies]
 function_name = "0"
 file_diff = "1"
+
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/bak", dest = "/usr/bin/bak", mode = "755" }
+]
+
+[package.metadata.packager]
+
 

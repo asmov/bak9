@@ -11,29 +11,46 @@ Creates a backup `.bak` copy of a file.
 Usage
 --------------------------------------------------------------------------------
 
-`bak [OPTION]... FILE [DIR]`
+`bak [OPTIONS] FILE [DIR] [COMMAND]`
 
 Creates a backup `.bak` copy of **FILE**.
 
 If **DIR** is not specified, the copy is created in the same directory as FILE.
 
-If *multiple* backups of FILE exist, the filename extension used will be: `.bak.N`.
+If DIR is specifed as `-`, or if the user lacks permissions to copy to DIR, the
+user's app data directory will be used instead.
 
-With multiple backups, the most recent backup will be always `bak.0`. Previous
-copies will have their filename extension shifted by 1 (e.g., `bak.1` -> `bak.2`).
+If *multiple* backups of FILE exist, the rotating filename extension used will be: `.bak.N`.
 
-Pruning (deletion) occurs after `-n NUM` backups. 
+The most recent rotating backup will be always `.bak.0`. 
 
-If the current backup is no *diff*erent than its predecessor, copying will be skipped. 
+Pruning of rotating backups occurs after `-n NUM` backups. 
+
+If the current backup is no different than its predecessor, copying will be skipped. 
+
+Additional **COMMAND**s may be appended to list, compare, or delete backups.
 
 ### Options
 
-- `-d`  
-Deletes all backup files for the source FILE.
-
 - `-n NUM`  
-Creates at most **NUM** backup files.  
-If not specified, defaults to 10 (0-9).
+Creates at most **NUM** backup files. [default: 10] 
+
+- `-q`  
+Quiet. Suppresses output.
+
+- `-f`
+Force the operation without confirmation.
+
+### Commands
+
+- `ls`  
+Lists all backups of FILE in DIR.
+
+- `diff N`  
+Shows the differences of FILE and its `bak.N` copy in DIR. [default: 0]
+
+- `rm`  
+Deletes all backups of FILE in DIR.
 
 License (GPL3)
 --------------------------------------------------------------------------------
