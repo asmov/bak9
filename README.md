@@ -22,7 +22,7 @@ user's app data directory will be used instead.
 
 If *multiple* backups of FILE exist, the rotating filename extension used will be: `.bak.N`.
 
-The most recent rotating backup will be always `.bak.0`. 
+The most recent rotating backup will always be `.bak.0`. 
 
 Pruning of rotating backups occurs after `-n NUM` backups. 
 
@@ -47,7 +47,7 @@ Force the operation without confirmation.
 Lists all backups of FILE in DIR.
 
 - `diff N`  
-Shows the differences of FILE and its `bak.N` copy in DIR. [default: 0]
+Shows the differences between FILE and the specified `bak.N` backup in DIR. [default: 0]
 
 - `rm`  
 Deletes all backups of FILE in DIR.

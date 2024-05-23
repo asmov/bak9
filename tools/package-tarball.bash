@@ -22,19 +22,20 @@ echo "packaging tarball: source"
 git archive --format tar.gz --prefix "${CARGO_NAME}_${CARGO_VERSION}/" HEAD > "${TARBALL_DIR}/${CARGO_NAME}_${CARGO_VERSION}.tar.gz"
 
 for target in "${RELEASE_TARGETS[@]}"; do
-    echo "packaging tarball: ${target}"
     package_dir_name="${CARGO_NAME}_${CARGO_VERSION}_${target//_/-}"
     package_dir="${TARBALL_DIR}/${package_dir_name}"
-    mkdir -p "${package_dir}"
+    bin_path="${PROJECT_DIR}/target/${target}/release/${CARGO_BIN_NAME}"
 
-    rsync -a "${TARBALL_TEMPLATE_DIR}/" "${package_dir}"
-
-    if [[ "$target" != *"windows"* ]]; then
-        cp "${PROJECT_DIR}/target/${target}/release/${CARGO_BIN_NAME}" "${package_dir}"
-    else
-        cp "${PROJECT_DIR}/target/${target}/release/${CARGO_BIN_NAME}.exe" "${package_dir}"
+    if [[ "$target" == *"windows"* ]]; then
+        bin_path="${PROJECT_DIR}/target/${target}/release/${CARGO_BIN_NAME}.exe"
     fi
 
+    [ -f "${bin_path}" ] || continue
+    echo "packaging tarball: ${target}"
+
+    mkdir -p "${package_dir}"
+    rsync -a "${TARBALL_TEMPLATE_DIR}/" "${package_dir}"
+    cp "${bin_path}" "${package_dir}"
     cd "${package_dir}/.."
     tar cf "${package_dir_name}.tar.xz" --use-compress-program='xz -T0' "${package_dir_name}"
     rm -rf "${package_dir}"

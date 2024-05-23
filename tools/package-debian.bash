@@ -12,12 +12,9 @@ DEB_DIR="${PROJECT_DIR}/target/pkg/debian"
 rm -rf "${DEB_DIR}"
 mkdir -p "${DEB_DIR}"
 
-for target in "${RELEASE_TARGETS[@]}"; do
-    [[ "$target" != *"linux"* ]] &&
-        continue
-
+for target in "${LINUX_RELEASE_TARGETS[@]}"; do
     echo "packaging .deb: ${target}"
-    cargo deb --target "${target}" --no-build --output="${DEB_DIR}"
+    cargo deb --target "${target}" --no-build --no-strip --output="${DEB_DIR}"
 done
 
 for deb in "${DEB_DIR}"/*.deb; do

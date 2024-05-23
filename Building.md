@@ -1,18 +1,31 @@
 # Building bak9
 
-Most of these steps are for cross-compilation.
+These steps are designed for cross-compilation from an Ubuntu 24 linux distro,
+using a Windows 11 Pro VM and hardware running macOS Sonoma on an M3 CPU.
 
+## Rust Targets
+
+To install a target:
+```bash
+rustup target add $TARGET
+rustup toolchain install stable-$TARGET 
+```
+
+- x86_64-unknown-linux-gnu
+- armv7-unknown-linux-gnueabihf
+- aarch64-unknown-linux-gnu
+- aarch64-apple-darwin
+- x86_64-pc-windows-msvc
 
 ## Requirements
-
-*Tested against Ubuntu Desktop 23*
 
 Debian packaging requires:
 ```bash
 sudo apt install \
-pkg-config build-essential \
-cross-build-essential-arm64 \
-cross-build-essential-armhf
+pkg-config \
+build-essential \
+crossbuild-essential-arm64 \
+crossbuild-essential-armhf
 ```
 
 Snap packaging requires:
@@ -27,7 +40,7 @@ cargo install cross
 
 Debian packaging requires:
 ```bash
-cargo install carg-deb
+cargo install cargo-deb
 ```
 
 RPM packaging requires:

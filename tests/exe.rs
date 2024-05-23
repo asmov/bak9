@@ -144,7 +144,7 @@ pub mod tests {
         let (stdout, stderr) = cmd(true, &[source_filepath.to_str().unwrap(), "ls"]);
         assert!(stderr.is_empty(), "stderr: {}", stderr);
         let lines: Vec<&str> = stdout.lines().collect();
-        assert_eq!(lines.len(), 4); // line 0 is a header
+        assert_eq!(4, lines.len(), "stdout: {}", lines.into_iter().collect::<String>()); // line 0 is a header
         assert_eq!(lines[1].trim(), SOURCE_TXT_BAK_0);
         assert_eq!(lines[2].trim(), SOURCE_TXT_BAK_1);
         assert_eq!(lines[3].trim(), SOURCE_TXT_BAK_2);
@@ -155,7 +155,7 @@ pub mod tests {
         let (stdout, stderr) = cmd(true, &[source_filepath.to_str().unwrap(), "ls"]);
         assert!(stderr.is_empty(), "stderr: {}", stderr);
         let lines: Vec<&str> = stdout.lines().collect();
-        assert_eq!(lines.len(), 6); // line 0 and 4 are headers
+        assert_eq!(6, lines.len()); // line 0 and 4 are headers
         assert_eq!(lines[1].trim(), SOURCE_TXT_BAK_0);
         assert_eq!(lines[2].trim(), SOURCE_TXT_BAK_1);
         assert_eq!(lines[3].trim(), SOURCE_TXT_BAK_2);
@@ -195,9 +195,13 @@ pub mod tests {
         let (stdout, stderr) = cmd(true, &[source_filepath.to_str().unwrap(), "diff", "1"]);
         assert!(stderr.is_empty(), "stderr: {}", stderr);
         // the last line should be either "< TESTING_CONTENT" (diff) or "-TESTING_CONTENT" (git)
-        let last_line = stdout.lines().collect::<Vec<&str>>().last().unwrap().trim();
+        let last_line = *stdout.trim().lines().collect::<Vec<&str>>().last().unwrap();
         // use .contains() to (poorly) ignore terminal color codes
-        assert!(last_line.contains(&format!("> {}", TESTING_CONTENT)) || last_line.contains(&format!("-{}", TESTING_CONTENT)));
+        assert!(
+            last_line == &format!("\u{1b}[32m+\u{1b}[m\u{1b}[32m{}\u{1b}[m", TESTING_CONTENT) // git diff
+            || last_line == &format!("\u{1b}[32m+ {}\u{1b}[0m", TESTING_CONTENT) // gnu diff
+            || last_line == &format!("{} =>", TESTING_CONTENT), // windows diff
+        );
 
         close_tmpdir(function_name!());
     }

@@ -4,6 +4,7 @@ mod common;
 mod tests {
     use super::common::*;
     use bak9;
+    use clap::Parser;
     use std::path::PathBuf;
 
     #[test]
@@ -207,15 +208,10 @@ mod tests {
     #[test]
     fn test_app_data_dir_mirror() {
         let tmpdir = open_tmpdir(function_name!());
-        std::fs::write(tmpdir.join("source.txt"), "LINE 1").unwrap();
-        bak9::run_with(bak9::cli::Cli {
-            file: tmpdir.join("source.txt"),
-            dir: Some(PathBuf::from("-")),
-            num: 3,
-            force: true,
-            quiet: true,
-            subcommand: None,
-        }).unwrap();
+        let source_filepath = tmpfile_append("LINE 1", "source.txt", function_name!());
+        bak9::run_with(
+            bak9::cli::Cli::parse_from(["-f", "-q", "-n", "3", source_filepath.to_str().unwrap(), "-"])
+        ).unwrap();
 
         let app_data_dir = bak9::os::user_app_data_dir(true, bak9::BAK9.into())
             .expect("Failed to get user app data directory");

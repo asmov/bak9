@@ -2,25 +2,37 @@ name: bak9
 version: git
 summary: Creates a backup bak copy of a file
 description: |
-  Creates a backup `.bak` copy of a file.
+  bak [OPTIONS] FILE [DIR] [COMMAND]
 
-  Usage: bak [OPTION]... FILE [DIR]
+  Creates a backup .bak copy of FILE.
 
   If DIR is not specified, the copy is created in the same directory as FILE.
 
-  If multiple backups of FILE exist, the filename extension used will be `.bak.N`.
+  If DIR is specifed as -, or if the user lacks permissions to copy to DIR, the user's app data directory will be used instead.
 
-  Pruning occurs after `-n NUM` backups. 
+  If multiple backups of FILE exist, the rotating filename extension used will be: .bak.N.
 
-base: core22
+  The most recent rotating backup will always be .bak.0.
+
+  Pruning of rotating backups occurs after -n NUM backups.
+
+  If the current backup is no different than its predecessor, copying will be skipped.
+
+  Additional COMMANDs may be appended to list, compare, or delete backups.
+
+
+base: core24
 confinement: classic
 
-architectures:
-  - build-on: amd64
+platforms:
+  amd64:
+    build-on: amd64
     build-for: amd64
-  - build-on: [amd64, arm64]
+  arm64:
+    build-on: [amd64, arm64]
     build-for: [arm64]
-  - build-on: [amd64, armhf]
+  armhf:
+    build-on: [amd64, armhf]
     build-for: [armhf]
 
 parts:

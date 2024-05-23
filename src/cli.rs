@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 
 use crate::{PathExt, E_STR};
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(version, about)]
 pub struct Cli {
     #[command(subcommand)]
@@ -27,15 +27,15 @@ pub struct Cli {
 }
 
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug)]
 pub enum Command {
     #[command(name = "ls", about = "List all backups of FILE in DIR")]
     List,
     #[command(name = "rm", about = "Deletes all backups of FILE in DIR")]
     Wipe, 
-    #[command(name = "diff", about = "Shows the differences between FILE and BAK.N")]
+    #[command(name = "diff", about = "Shows the differences between FILE and bak.N in DIR")]
     Diff {
-        #[arg(default_value_t = 0, help = "The BAK index to compare FILE with")]
+        #[arg(default_value_t = 0, help = "The .bak.N index to compare FILE with")]
         index: u8,
     }
 }

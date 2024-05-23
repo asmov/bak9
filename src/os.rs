@@ -2,6 +2,15 @@ use std::{env, fs, io, path::{Path, PathBuf}};
 
 use crate::E_STR;
 
+fn sanitize_cmd_path(path: &Path) -> &str {
+    let path = path.to_str().expect(E_STR);
+    if cfg!(target_os = "windows") {
+        path.trim_start_matches("\\\\?\\")
+    } else {
+        path
+    }
+}
+
 pub fn copy_file(source: &Path, dest: &Path) -> io::Result<()> {
     #[cfg(target_os = "linux")]
     match linux_cp(source, dest) {
@@ -13,6 +22,7 @@ pub fn copy_file(source: &Path, dest: &Path) -> io::Result<()> {
         .map(|_| ())
 }
 
+#[cfg(target_os = "linux")]
 fn linux_cp(source: &Path, dest: &Path) -> io::Result<()> {
     let output = std::process::Command::new("cp")
         .arg("--preserve")
@@ -39,13 +49,13 @@ pub fn print_diff(source: &Path, file_b: &Path) -> Result<(), crate::Error> {
         .arg("diff")
         .arg("--no-index")
         .arg("--color")
-        .arg(source)
-        .arg(file_b)
+        .arg(sanitize_cmd_path(file_b))
+        .arg(sanitize_cmd_path(source))
         .output();
 
     match output {
         Ok(output) => {
-            let lines: String = String::from_utf8(output.stdout).expect(E_STR)
+            let lines: String = String::from_utf8(output.stdout).expect(E_STR).trim()
                 .lines()
                 .skip(2)
                 .map(|line| format!("{line}\n"))
@@ -57,34 +67,30 @@ pub fn print_diff(source: &Path, file_b: &Path) -> Result<(), crate::Error> {
         Err(_) => {} // try system 'diff'
     }
 
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
-    {
+    if cfg!(any(target_os = "linux", target_os = "macos")) {
         let output = std::process::Command::new("diff")
+            .arg("--color=always")
             .arg("-c")
-            .arg(source)
             .arg(file_b)
+            .arg(source)
             .output()
             .map_err(|e| crate::Error::Generic(e.to_string()))?;
 
-        println!("{}", String::from_utf8(output.stdout).expect(E_STR));
+        println!("{}", String::from_utf8(output.stdout).expect(E_STR).trim());
         Ok(())
-    }
-
-    #[cfg(target_os = "windows")]
-    {
+    } else if cfg!(target_os = "windows") {
         let output = std::process::Command::new("powershell")
-            .arg(format!("compare-object"))
-            .arg(format("(get-content {})", source))
-            .arg(format("(get-content {})", file_b))
+            .arg("compare-object")
+            .arg(format!("(get-content {})", sanitize_cmd_path(file_b)))
+            .arg(format!("(get-content {})", sanitize_cmd_path(source)))
             .output()
             .map_err(|e| crate::Error::Generic(e.to_string()))?;
 
-        println!("{}", String::from_utf8(output.stdout).expect(E_STR));
+        println!("{}", String::from_utf8(output.stdout).expect(E_STR).trim());
         Ok(())
+    } else {
+        Err(crate::Error::Generic("Unsupported OS".to_string()))
     }
-
-    #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
-    Err(crate::Error::Generic("Unsupported OS".to_string()))
 }
 
 /// Retrieves the bak9 data directory if possible, otherwise None.
@@ -92,9 +98,9 @@ pub fn user_app_data_dir(mkdir: bool, app_subdirs: PathBuf) -> io::Result<PathBu
     #[cfg(target_os = "linux")]
     let os_data_dir = linux_user_app_data_dir(mkdir)?;
     #[cfg(target_os = "windows")]
-    let (os_data_dir, subdir) = windows_user_app_data_dir(mkdir, app_dir)?;
+    let os_data_dir = windows_user_app_data_dir()?;
     #[cfg(target_os = "macos")]
-    let (os_data_dir, subdir) = macos_user_app_data_dir(mkdir, app_dir)?;
+    let os_data_dir = macos_user_app_data_dir()?;
     #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
     return Err(io::Error::new(io::ErrorKind::Other, "Unsupported OS"));
 
@@ -129,7 +135,8 @@ fn linux_user_app_data_dir(mkdir: bool) -> io::Result<PathBuf> {
         fs::create_dir_all(&dir)?;
         dir.canonicalize()
     } else {
-        Err(io::Error::new(io::ErrorKind::NotFound, format!("Linux user app data directory not found: {}", dir.to_str().unwrap())))
+        Err(io::Error::new(io::ErrorKind::NotFound,
+            format!("Linux user app data directory not found: {}", dir.to_str().unwrap())))
     }
 }
 
@@ -138,10 +145,14 @@ const ENV_LOCAL_APP_DATA: &str = "LocalAppData";
 
 #[cfg(target_os = "windows")]
 fn windows_user_app_data_dir() -> io::Result<PathBuf> {
-    let dir = env::var(ENV_LOCAL_APP_DATA)?.into();
+    let dir: PathBuf = env::var(ENV_LOCAL_APP_DATA)
+        .map_err(|_| io::Error::new(io::ErrorKind::NotFound,
+            format!("Windows %LocalAppData% not found")))?
+        .into();
 
     dir.canonicalize()
-        .map_err(|e| io::Error::new(io::ErrorKind::NotFound, "Windows user app data directory not found: {}", dir.to_str().unwrap()))
+        .map_err(|_| io::Error::new(io::ErrorKind::NotFound,
+            format!("Windows user app data directory not found: {}", dir.to_str().unwrap())))
 }
 
 #[cfg(target_os = "macos")]
@@ -151,11 +162,15 @@ const HOME: &str = "HOME";
 
 #[cfg(target_os = "macos")]
 fn macos_user_app_data_dir() -> io::Result<PathBuf> {
-    let dir = env::var(HOME)?
-        .into()
-        .join(MACOS_LIBRARY_APP_SUPPORT);
+    let dir: PathBuf = env::var(HOME)
+        .map_err(|_| io::Error::new(io::ErrorKind::NotFound,
+            format!("macOS HOME is not set")))?
+        .into();
 
-    dir.canonicalize()
-        .map_err(|e| io::Error::new(io::ErrorKind::NotFound, "MacOS user app data directory not found: {}", dir.to_str().unwrap()))
+    dir
+        .join(MACOS_LIBRARY_APP_SUPPORT)
+        .canonicalize()
+        .map_err(|_| io::Error::new(io::ErrorKind::NotFound,
+            format!("macOS user app data directory not found: {}", dir.to_str().unwrap())))
 
 }

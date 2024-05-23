@@ -194,7 +194,7 @@ fn confirm_wipe(source_file: &Path, dir: &Path, force: bool) -> bool {
     print!("{} Delete all backups of {} in {}? {} ",
         "confirm:".bright_yellow(), 
         source_file.filename_str().expect(E_FILENAME).cyan(),
-        dir.to_str().expect(E_STR).cyan(),
+        sanitize_path_str(dir.to_str().expect(E_STR)).cyan(),
         "(y/N):".magenta());
 
     std::io::stdout().flush()
@@ -283,7 +283,9 @@ fn print_list_backups(source_file: &Path, dir: &Path) -> Result<(), Error> {
         return Ok(())
     }
 
-    println!("Backups of {file} in {dir}:", file = source_file.to_str().expect(E_STR).cyan(), dir = dir.to_str().expect(E_STR).cyan());
+    println!("Backups of {file} in {dir}:",
+        file = sanitize_path_str(source_file.to_str().expect(E_STR)).cyan(),
+        dir = sanitize_path_str(dir.to_str().expect(E_STR)).cyan());
 
     for bak_filepath in bak_filepaths {
         println!("    {}", bak_filepath.filename_str().expect(E_STR).green());
@@ -344,7 +346,7 @@ fn wipe(source_file: &Path, dest_dir: &Path) -> Result<(), Error> {
 }
 
 /// Retrieves a list of all `.bak.N` files in the directory.
-fn list_bak_n_files(file: &Path, dir: &Path, ) -> Result<Vec<PathBuf>, Error> {
+fn list_bak_n_files(file: &Path, dir: &Path) -> Result<Vec<PathBuf>, Error> {
     let bak_n_file_pattern = file
         .append_extension(BAK_DOT)
         .filename_string().expect(E_FILENAME);
@@ -411,7 +413,8 @@ fn run_backup(cli: &cli::Cli) -> Result<(), Error> {
                 .map_err(|_| Error::copy(&cli.file, &home_bak_filepath, e))?;
 
             if !cli.quiet {
-                eprintln!("{} copied to {}", "notice:".yellow(), home_bak_filepath.to_str().expect("Expected string").cyan());
+                eprintln!("{} copied to {}", "notice:".yellow(),
+                    sanitize_path_str(home_bak_filepath.to_str().expect(E_STR)).cyan());
             }
 
             Ok(())
@@ -466,20 +469,41 @@ fn determine_destination(source_file: &Path, dest_dir: &Path, max: u8) -> Result
     Ok(Some(bak_filepath))
 }
 
-pub fn mirror_dir(base_dir: &Path, src_file: &Path, mkdir: bool) -> Result<PathBuf, Error> {
+pub fn sanitize_path_str(path: &str) -> &str {
+    sanitize_windows_path_str(path)
+}
+
+pub fn sanitize_windows_path_str(path: &str) -> &str {
+    path.trim_start_matches("\\\\?\\")
+}
+
+fn determine_mirror_dir(base_dir: &Path, src_file: &Path) -> Result<PathBuf, Error> {
     let src_dir = src_file.parent().expect("Expected parent directory");
     let mut mirror_dir = base_dir.to_path_buf();
 
     for component in src_dir.components() {
-        let dirname = component.as_os_str().to_str().expect(E_STR);
+        let dirname = component.as_os_str().to_str().expect(E_STR)
+            .trim_start_matches("\\\\?\\"); // remove any windows extended path prefix
+
         match dirname {
-            "." | "/" => continue,
+            "." | "/" | "\\" => continue,
             ".." => unreachable!("Expected absolute path"),
             _ => {}
         }
 
-        mirror_dir.push(dirname);
+        // windows drives (C:, D:, etc)
+        if dirname.chars().count() == 2 && dirname.chars().nth(1).unwrap() == ':' {
+            mirror_dir.push(dirname.chars().nth(0).unwrap().to_string());
+        } else {
+            mirror_dir.push(dirname);
+        }
     }
+
+    Ok(mirror_dir)
+}
+
+pub fn mirror_dir(base_dir: &Path, src_file: &Path, mkdir: bool) -> Result<PathBuf, Error> {
+    let mirror_dir = determine_mirror_dir(base_dir, src_file)?;
 
     if !mirror_dir.is_dir() && mkdir {
         fs::create_dir_all(&mirror_dir)
@@ -549,5 +573,29 @@ fn find_last_bak(file: &Path, dir: &Path) -> Option<PathBuf> {
         } else {
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+    use super::*;
+
+    #[test]
+    fn test_determine_mirror_dir() {
+        let base_dir = "/home/dev/.local/share/bak9";
+        let src_file = "/home/dev/tmp/source.txt";
+        let mirror_dir = determine_mirror_dir(Path::new(base_dir), Path::new(src_file)).unwrap();
+        assert_eq!(Path::new("/home/dev/.local/share/bak9/home/dev/tmp"), mirror_dir);
+    }
+    
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn test_determine_mirror_dir_windows() {
+        // test a windows path with path extensions
+        let base_dir = "\\\\?\\C:\\Users\\dev\\AppData\\Local\\bak9";
+        let src_file = "\\\\?\\C:\\Users\\dev\\tmp\\source.txt";
+        let mirror_dir = determine_mirror_dir(Path::new(base_dir), Path::new(src_file)).unwrap();
+        assert_eq!("\\\\?\\C:\\Users\\dev\\AppData\\Local\\bak9\\C\\Users\\dev\\tmp", mirror_dir.to_str().unwrap());
     }
 }
