@@ -24,7 +24,7 @@ If multiple backups of FILE exist, the rotating filename extension used will be:
 
 The most recent rotating backup will always be `.bak.0` 
 
-Pruning of rotating backups occurs after `-n NUM` backups. 
+Pruning of rotating backups occurs after `-n NUM` copies. 
 
 If the current backup is no different than its predecessor, copying will be skipped. 
 
