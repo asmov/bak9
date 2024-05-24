@@ -54,7 +54,7 @@ Deletes all backups of FILE in DIR.
 
 License (GPL3)
 --------------------------------------------------------------------------------
-bak9: Crates a backup `.bak` copy of a file.  
+bak9: Creates a backup `.bak` copy of a file.  
 Copyright (C) 2024 Asmov LLC  
 
 This program is free software: you can redistribute it and/or modify
