@@ -17,12 +17,12 @@ Creates a backup `.bak` copy of **FILE**.
 
 If **DIR** is not specified, the copy is created in the same directory as FILE.
 
-If DIR is specifed as `-`, or if the user lacks permissions to copy to DIR, the
+If DIR is specified as `-`, or if the user lacks permissions to copy to DIR, the
 user's app data directory will be used instead.
 
-If *multiple* backups of FILE exist, the rotating filename extension used will be: `.bak.N`.
+If multiple backups of FILE exist, the rotating filename extension used will be: `.bak.N`
 
-The most recent rotating backup will always be `.bak.0`. 
+The most recent rotating backup will always be `.bak.0` 
 
 Pruning of rotating backups occurs after `-n NUM` backups. 
 
