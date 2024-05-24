@@ -191,12 +191,10 @@ pub mod tests {
         assert!(stderr.is_empty(), "stderr: {}", stderr);
 
         //STEP: Diff between source.txt and .bak.1 
-        //RESULT: Difference it output
+        //RESULT: Reports the difference. We match all possible diff outputs
         let (stdout, stderr) = cmd(true, &[source_filepath.to_str().unwrap(), "diff", "1"]);
         assert!(stderr.is_empty(), "stderr: {}", stderr);
-        // the last line should be either "< TESTING_CONTENT" (diff) or "-TESTING_CONTENT" (git)
         let last_line = *stdout.trim().lines().collect::<Vec<&str>>().last().unwrap();
-        // use .contains() to (poorly) ignore terminal color codes
         assert!(
             last_line == &format!("\u{1b}[32m+\u{1b}[m\u{1b}[32m{}\u{1b}[m", TESTING_CONTENT) // git diff
             || last_line == &format!("\u{1b}[32m+ {}\u{1b}[0m", TESTING_CONTENT) // gnu diff
