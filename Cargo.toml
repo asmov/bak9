@@ -1,33 +1,5 @@
-[package]
-name = "bak9"
-version = "0.3.1"
-edition = "2021"
-description = "Creates a backup .bak copy of a file"
-authors = ["Asmov LLC <development.pub@asmov.software>"]
-repository = "https://github.com/asmov/bak9"
-license = "GPL-3.0-or-later"
-keywords = ["backup", "copy"]
-categories = ["command-line-utilities", "filesystem"]
-
-[[bin]]
-name = "bak"
-path = "src/main.rs"
-
-[profile.release]
-strip = "symbols"
-
-[dependencies]
-clap = { version = "4", features = ["derive"] }
-colored = "2"
-file_diff = "1"
-strum = { version = "0", features = ["derive"] }
-thiserror = "1"
-
-[dev-dependencies]
-function_name = "0"
-file_diff = "1"
-
-[package.metadata.generate-rpm]
-assets = [
-    { source = "target/release/bak", dest = "/usr/bin/bak", mode = "755" }
+[workspace]
+resolver = "2"
+members = [
+    "bak"
 ]
