@@ -1,15 +1,14 @@
 bak9
 ================================================================================
-[![Latest Version: bak]][crates.io:bak]
-
-[Latest Version: bak]: https://img.shields.io/crates/v/bak9.svg
-[crates.io:bak]: https://crates.io/crates/bak9
-
 Utilities for ad-hoc backups.
 
 
 bak
 --------------------------------------------------------------------------------
+[![Latest Version: bak]][crates.io:bak]
+
+[Latest Version: bak]: https://img.shields.io/crates/v/bak9.svg
+[crates.io:bak]: https://crates.io/crates/bak9
 
 ### Usage
 
