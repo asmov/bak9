@@ -3,3 +3,7 @@ resolver = "2"
 members = [
     "bak"
 ]
+
+[profile.release]
+strip = "symbols"
+

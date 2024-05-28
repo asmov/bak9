@@ -1,6 +1,6 @@
 name: bak9
 version: git
-summary: Creates a backup bak copy of a file
+summary: Utilities for ad-hoc backups
 description: |
   bak [OPTIONS] FILE [DIR] [COMMAND]
 

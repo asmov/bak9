@@ -1,15 +1,17 @@
-bak9: bak
+bak9
 ================================================================================
 [![Latest Version]][crates.io]
 
-[Latest Version]: https://img.shields.io/crates/v/bak9-bak.svg
-[crates.io]: https://crates.io/crates/bak9-bak
+[Latest Version]: https://img.shields.io/crates/v/bak9.svg
+[crates.io]: https://crates.io/crates/bak9
 
-Creates a backup `.bak` copy of a file.
+Utilities for ad-hoc backups.
 
 
-Usage
+bak
 --------------------------------------------------------------------------------
+
+### Usage
 
 `bak [OPTIONS] FILE [DIR] [COMMAND]`
 
@@ -30,7 +32,7 @@ If the current backup is no different than its predecessor, copying will be skip
 
 Additional **COMMAND**s may be appended to list, compare, or delete backups.
 
-### Options
+#### Options
 
 - `-n NUM`  
 Creates at most **NUM** backup files. [default: 10] 
@@ -41,7 +43,7 @@ Quiet. Suppresses output.
 - `-f`
 Force the operation without confirmation.
 
-### Commands
+#### Commands
 
 - `ls`  
 Lists all backups of FILE in DIR.
@@ -54,7 +56,7 @@ Deletes all backups of FILE in DIR.
 
 License (GPL3)
 --------------------------------------------------------------------------------
-bak9: Creates a backup `.bak` copy of a file.  
+bak9: Utilities for ad-hoc backups.  
 Copyright (C) 2024 Asmov LLC  
 
 This program is free software: you can redistribute it and/or modify
