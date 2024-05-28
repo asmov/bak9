@@ -26,21 +26,21 @@ if [ -f "${PROJECT_DIR}/pkg.cfg" ]; then
 
     echo "remote building native windows releases"
 
-    mkdir -p "${PROJECT_DIR}/target/pkg/msi"
+    mkdir -p "${TARGET_DIR}/pkg/msi"
 
     for target in "${WINDOWS_NATIVE_RELEASE_TARGETS[@]}"; do
         echo "remote building native windows release: ${target}"
-        ssh "$WINDOWS_SSH_HOST" "cd "$WINDOWS_SSH_PROJECT_DIR" ; cargo build --release --target="${target}""
+        ssh "$WINDOWS_SSH_HOST" "cd "$WINDOWS_SSH_WORKSPACE_DIR" ; cargo build --release --target="${target}""
         echo "remote building msi: ${target}"
-        ssh "$WINDOWS_SSH_HOST" "cd "$WINDOWS_SSH_PROJECT_DIR" ; cargo wix"
-        mkdir -p "${PROJECT_DIR}/target/${target}/release"
+        ssh "$WINDOWS_SSH_HOST" "cd "$WINDOWS_SSH_WORKSPACE_DIR/${CARGO_NAME}" ; cargo wix"
+        mkdir -p "${TARGET_DIR}/${target}/release"
         echo "downloading build artifacts: ${target}"
-        scp "${WINDOWS_SSH_HOST}:${WINDOWS_SSH_PROJECT_DIR}/target/${target}/release/${CARGO_BIN_NAME}.exe" "${PROJECT_DIR}/target/${target}/release"
+        scp "${WINDOWS_SSH_HOST}:${WINDOWS_SSH_WORKSPACE_DIR}/target/${target}/release/${CARGO_BIN_NAME}.exe" "${TARGET_DIR}/${target}/release"
     done
     
-    scp "${WINDOWS_SSH_HOST}:${WINDOWS_SSH_PROJECT_DIR}/target/wix/*.msi" "${PROJECT_DIR}/target/pkg/msi"
+    scp "${WINDOWS_SSH_HOST}:${WINDOWS_SSH_WORKSPACE_DIR}/target/wix/*.msi" "${TARGET_DIR}/pkg/msi"
 
-    for msi in "${PROJECT_DIR}/target/pkg/msi"/*.msi; do
+    for msi in "${TARGET_DIR}/pkg/msi"/*.msi; do
         sha256sum -b "${msi}" > "${msi}.sha256"
     done
 
@@ -49,10 +49,10 @@ if [ -f "${PROJECT_DIR}/pkg.cfg" ]; then
 
     for target in "${MACOS_NATIVE_RELEASE_TARGETS[@]}"; do
         echo "remote building native macos release: ${target}"
-        ssh "$MACOS_SSH_HOST" "cd "$MACOS_SSH_PROJECT_DIR" && cargo build --release --target="${target}""
-        mkdir -p "${PROJECT_DIR}/target/${target}/release"
+        ssh "$MACOS_SSH_HOST" "cd "$MACOS_SSH_WORKSPACE_DIR" && cargo build --release --target="${target}""
+        mkdir -p "${TARGET_DIR}/${target}/release"
         echo "downloading build artifacts: ${target}"
-        scp "${MACOS_SSH_HOST}:${MACOS_SSH_PROJECT_DIR}/target/${target}/release/${CARGO_BIN_NAME}" "${PROJECT_DIR}/target/${target}/release"
+        scp "${MACOS_SSH_HOST}:${MACOS_SSH_WORKSPACE_DIR}/target/${target}/release/${CARGO_BIN_NAME}" "${TARGET_DIR}/${target}/release"
     done
 
     echo "finished remote building native macos releases"

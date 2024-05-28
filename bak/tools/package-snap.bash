@@ -8,7 +8,7 @@ source "${PROJECT_DIR}/tools/common.lib.bash"
 
 echo "began packaging snaps"
 
-SNAP_DIR="${PROJECT_DIR}/target/pkg/snap"
+SNAP_DIR="${TARGET_DIR}/pkg/snap"
 rm -rf "${SNAP_DIR}"
 mkdir -p "${SNAP_DIR}"
 

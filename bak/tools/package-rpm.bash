@@ -8,7 +8,7 @@ source "${PROJECT_DIR}/tools/common.lib.bash"
 
 echo "began packaging for Red Hat"
 
-RPM_DIR="${PROJECT_DIR}/target/pkg/rpm"
+RPM_DIR="${TARGET_DIR}/pkg/rpm"
 rm -rf "${RPM_DIR}"
 mkdir -p "${RPM_DIR}"
 

@@ -7,7 +7,7 @@ source "${PROJECT_DIR}/tools/common.lib.bash"
 
 echo "began packaging tarballs"
 
-TARBALL_DIR="${PROJECT_DIR}/target/pkg/tarball"
+TARBALL_DIR="${TARGET_DIR}/pkg/tarball"
 rm -rf "${TARBALL_DIR}"
 mkdir -p "${TARBALL_DIR}"
 
@@ -24,10 +24,10 @@ git archive --format tar.gz --prefix "${CARGO_NAME}_${CARGO_VERSION}/" HEAD > "$
 for target in "${RELEASE_TARGETS[@]}"; do
     package_dir_name="${CARGO_NAME}_${CARGO_VERSION}_${target//_/-}"
     package_dir="${TARBALL_DIR}/${package_dir_name}"
-    bin_path="${PROJECT_DIR}/target/${target}/release/${CARGO_BIN_NAME}"
+    bin_path="${TARGET_DIR}/${target}/release/${CARGO_BIN_NAME}"
 
     if [[ "$target" == *"windows"* ]]; then
-        bin_path="${PROJECT_DIR}/target/${target}/release/${CARGO_BIN_NAME}.exe"
+        bin_path="${TARGET_DIR}/${target}/release/${CARGO_BIN_NAME}.exe"
     fi
 
     [ -f "${bin_path}" ] || continue

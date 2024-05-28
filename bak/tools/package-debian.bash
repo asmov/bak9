@@ -8,7 +8,7 @@ source "${PROJECT_DIR}/tools/common.lib.bash"
 
 echo "began packaging for Debian"
 
-DEB_DIR="${PROJECT_DIR}/target/pkg/debian"
+DEB_DIR="${TARGET_DIR}/pkg/debian"
 rm -rf "${DEB_DIR}"
 mkdir -p "${DEB_DIR}"
 

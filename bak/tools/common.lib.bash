@@ -2,6 +2,9 @@
 # Common library for tools
 set -euo pipefail
 
+WORKSPACE_DIR="$(realpath "$(dirname "$0")/../..")"
+TARGET_DIR="${WORKSPACE_DIR}/target"
+
 TARGET_LINUX_X86_64="x86_64-unknown-linux-gnu"
 TARGET_LINUX_ARM_64="aarch64-unknown-linux-gnu"
 TARGET_LINUX_ARM_V7="armv7-unknown-linux-gnueabihf"
