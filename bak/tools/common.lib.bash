@@ -2,7 +2,9 @@
 # Common library for tools
 set -euo pipefail
 
-WORKSPACE_DIR="$(realpath "$(dirname "$0")/../..")"
+WORKSPACE_DIR="$(realpath "$(dirname "$(cargo locate-project --workspace --message-format=plain)")")"
+PACKAGE_DIR="$(realpath "$(dirname "$(cargo locate-project --message-format=plain)")")"
+PACKAGE_SUBDIR="${PACKAGE_DIR##${WORKSPACE_DIR}/}"
 TARGET_DIR="${WORKSPACE_DIR}/target"
 
 TARGET_LINUX_X86_64="x86_64-unknown-linux-gnu"

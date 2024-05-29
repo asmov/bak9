@@ -24,27 +24,16 @@ done
 if [ -f "${PROJECT_DIR}/pkg.cfg" ]; then
     source "${PROJECT_DIR}/pkg.cfg"
 
-    echo "remote building native windows releases"
-
-    mkdir -p "${TARGET_DIR}/pkg/msi"
+    echo "began remote building native windows releases"
 
     for target in "${WINDOWS_NATIVE_RELEASE_TARGETS[@]}"; do
-        echo "remote building native windows release: ${target}"
-        ssh "$WINDOWS_SSH_HOST" "cd "$WINDOWS_SSH_WORKSPACE_DIR" ; cargo build --release --target="${target}""
-        echo "remote building msi: ${target}"
-        ssh "$WINDOWS_SSH_HOST" "cd "$WINDOWS_SSH_WORKSPACE_DIR/${CARGO_NAME}" ; cargo wix"
-        mkdir -p "${TARGET_DIR}/${target}/release"
-        echo "downloading build artifacts: ${target}"
-        scp "${WINDOWS_SSH_HOST}:${WINDOWS_SSH_WORKSPACE_DIR}/target/${target}/release/${CARGO_BIN_NAME}.exe" "${TARGET_DIR}/${target}/release"
-    done
-    
-    scp "${WINDOWS_SSH_HOST}:${WINDOWS_SSH_WORKSPACE_DIR}/target/wix/*.msi" "${TARGET_DIR}/pkg/msi"
-
-    for msi in "${TARGET_DIR}/pkg/msi"/*.msi; do
-        sha256sum -b "${msi}" > "${msi}.sha256"
+    #todo: call remote build instead
+        ssh "$WINDOWS_SSH_HOST" "cd "$WINDOWS_SSH_WORKSPACE_DIR/${PACKAGE_SUBDIR}" && ./tools/build-windows.bash "$target""
     done
 
     echo "finished remote building native windows releases"
+
+
     echo "remote building native macos releases"
 
     for target in "${MACOS_NATIVE_RELEASE_TARGETS[@]}"; do

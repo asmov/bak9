@@ -24,7 +24,7 @@ cargo test
 cargo build --release
 cargo test --release
 
-"${PROJECT_DIR}/tools/build-release.bash"
-"${PROJECT_DIR}/tools/package-all.bash"
+"${PROJECT_DIR}/tools/build.bash"
+"${PROJECT_DIR}/tools/package.bash"
 
 echo "finished releasing"
