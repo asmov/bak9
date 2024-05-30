@@ -4,13 +4,13 @@ set -euo pipefail
 
 WSL='/mnt/c/Program Files/WSL/wsl.exe'
 if [ -f "${WSL}" ]; then
-    CARGO=""${WSL}" cargo.exe"
+    CARGO="$("${WSL}" which cargo.exe)"
 else
     CARGO="cargo"
 fi
 
-WORKSPACE_DIR="$(realpath "$(dirname "$($CARGO locate-project --workspace --message-format=plain)")")"
-PACKAGE_DIR="$(realpath "$(dirname "$($CARGO locate-project --message-format=plain)")")"
+WORKSPACE_DIR="$(realpath "$(dirname "$("$CARGO" locate-project --workspace --message-format=plain)")")"
+PACKAGE_DIR="$(realpath "$(dirname "$("$CARGO" locate-project --message-format=plain)")")"
 PACKAGE_SUBDIR="${PACKAGE_DIR##${WORKSPACE_DIR}/}"
 TARGET_DIR="${WORKSPACE_DIR}/target"
 
