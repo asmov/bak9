@@ -1,7 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 PROJECT_DIR="$(realpath "$(dirname "$0")/..")"
-~/mnt/wsl.exe
 EXE=".exe"
 source "${PROJECT_DIR}/tools/common.lib.bash"
 
