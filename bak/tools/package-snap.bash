@@ -6,7 +6,7 @@ shopt -s extglob
 PROJECT_DIR="$(realpath "$(dirname "$0")/..")"
 source "${PROJECT_DIR}/tools/common.lib.bash"
 
-echo "began packaging snaps"
+log "Began packaging snaps"
 
 SNAP_DIR="${TARGET_DIR}/pkg/snap"
 rm -rf "${SNAP_DIR}"
@@ -27,4 +27,4 @@ for snap in "${SNAP_DIR}"/*.snap; do
     sha256sum -b "${snap}" > "${snap}.sha256"
 done
 
-echo "finished packaging snaps"
+log "Finished packaging snaps"

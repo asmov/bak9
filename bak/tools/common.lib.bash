@@ -2,8 +2,10 @@
 # Common library for tools
 set -euo pipefail
 
-WORKSPACE_DIR="$(realpath "$(dirname "$(cargo locate-project --workspace --message-format=plain)")")"
-PACKAGE_DIR="$(realpath "$(dirname "$(cargo locate-project --message-format=plain)")")"
+EXE="${EXE:-}"
+
+WORKSPACE_DIR="$(realpath "$(dirname "$(cargo${EXE} locate-project --workspace --message-format=plain)")")"
+PACKAGE_DIR="$(realpath "$(dirname "$(cargo${EXE} locate-project --message-format=plain)")")"
 PACKAGE_SUBDIR="${PACKAGE_DIR##${WORKSPACE_DIR}/}"
 TARGET_DIR="${WORKSPACE_DIR}/target"
 
@@ -45,6 +47,7 @@ MACOS_NATIVE_RELEASE_TARGETS=(
   "${TARGET_MACOS_ARM_64}"
 )
 
+
 CARGO_NAME="$(grep -m1 '^name' "${PACKAGE_DIR}/Cargo.toml" | cut -d '"' -f 2)"
 CARGO_VERSION="$(grep '^version' "${PACKAGE_DIR}/Cargo.toml" | cut -d '"' -f 2)"
 CARGO_VERSION_EXT="${CARGO_VERSION}-1"
@@ -52,11 +55,30 @@ CARGO_BIN_NAME="$(sed -n '/\[\[bin\]\]/,$p' "${PACKAGE_DIR}/Cargo.toml" | grep '
 
 GIT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 
+COLOR_RED='\033[0;31m'
 COLOR_BOLD_RED='\033[1;31m'
+COLOR_GREEN='\033[0;32m'
 COLOR_NONE='\033[0m'
+
+log() {
+  log_prefix "bak9" "${1}"
+}
+
+log_prefix() {
+  echo -e "${COLOR_GREEN}[$(date "+%H:%M:%S") ${1}]${COLOR_NONE} ${2}"
+}
 
 echo_error() {
   echo -e "${COLOR_BOLD_RED}error:${COLOR_NONE} ${1}" 1>&2
+}
+
+log_error_prefix() {
+  echo -e "${COLOR_RED}[$(date "+%H:%M:%S") ${1}]${COLOR_NONE} ${COLOR_BOLD_RED}error:${COLOR_NONE} ${2}"
+}
+
+log_error() {
+  log_error_prefix "bak9" "${1}"
+  exit 1
 }
 
 error() {
@@ -65,10 +87,16 @@ error() {
 }
 
 source_pkg_cfg() {
-  if [ -f "${PACKAGE_DIR}/pkg.cfg" ]; then
-    source "${PACKAGE_DIR}/pkg.cfg"
+  if [ -f "${PACKAGE_DIR}/pkg.cfg.bash" ]; then
+    source "${PACKAGE_DIR}/pkg.cfg.bash"
   else
-    error "File not found: ${PACKAGE_DIR}/pkg.cfg"
+    error "File not found: ${PACKAGE_DIR}/pkg.cfg.bash"
   fi
 }
+
+catch_err() {
+    log_error "Unable to proceed"
+}
+
+trap 'catch_err' ERR
 

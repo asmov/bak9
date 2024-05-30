@@ -5,7 +5,7 @@ set -euo pipefail
 PROJECT_DIR="$(realpath "$(dirname "$0")/..")"
 source "${PROJECT_DIR}/tools/common.lib.bash"
 
-echo "began packaging tarballs"
+log "Began packaging tarballs"
 
 TARBALL_DIR="${TARGET_DIR}/pkg/tarball"
 rm -rf "${TARBALL_DIR}"
@@ -18,7 +18,7 @@ cp "${PROJECT_DIR}/README.md" "${TARBALL_TEMPLATE_DIR}"
 cp "${PROJECT_DIR}/LICENSE.txt" "${TARBALL_TEMPLATE_DIR}"
 cp "${PROJECT_DIR}/COPYING.txt" "${TARBALL_TEMPLATE_DIR}"
 
-echo "packaging tarball: source"
+log "Packaging tarball: source"
 git archive --format tar.gz --prefix "${CARGO_NAME}_${CARGO_VERSION}/" HEAD > "${TARBALL_DIR}/${CARGO_NAME}_${CARGO_VERSION}.tar.gz"
 
 for target in "${RELEASE_TARGETS[@]}"; do
@@ -31,7 +31,8 @@ for target in "${RELEASE_TARGETS[@]}"; do
     fi
 
     [ -f "${bin_path}" ] || continue
-    echo "packaging tarball: ${target}"
+
+    log "Packaging tarball: ${target}"
 
     mkdir -p "${package_dir}"
     rsync -a "${TARBALL_TEMPLATE_DIR}/" "${package_dir}"
@@ -47,5 +48,5 @@ for tarball in "${TARBALL_DIR}"/*.tar.*; do
     sha256sum -b "${tarball}" > "${tarball}.sha256"
 done
 
-echo "finished packaging tarballs"
+log "Finished packaging tarballs"
 

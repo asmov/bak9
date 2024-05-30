@@ -4,12 +4,12 @@
 set -euo pipefail
 PROJECT_DIR="$(realpath "$(dirname "$0")/..")"
 
-echo "began packaging linux releases"
+log "Began packaging linux releases"
 
 "${PROJECT_DIR}/tools/package-tarball.bash"
 "${PROJECT_DIR}/tools/package-debian.bash"
 "${PROJECT_DIR}/tools/package-rpm.bash"
 "${PROJECT_DIR}/tools/package-snap.bash"
 
-echo "finished packaging linux releases"
+log "Finished packaging linux releases"
 

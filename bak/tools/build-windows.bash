@@ -1,25 +1,27 @@
 #!/bin/bash
 set -euo pipefail
 PROJECT_DIR="$(realpath "$(dirname "$0")/..")"
+~/mnt/wsl.exe
+EXE=".exe"
 source "${PROJECT_DIR}/tools/common.lib.bash"
 
 target="$1"
 
 cd "${PROJECT_DIR}"
 
-echo "began building windows release: ${target}"
+log "Began building windows release: ${target}"
 
-echo "debug testing: ${target}"
+log "Debug testing: ${target}"
 cargo.exe test --target="${target}"
 
-echo "building release: ${target}"
+log "Building release: ${target}"
 cargo.exe build --release --target="${target}"
 
-echo "testing release: ${target}"
+log "Testing release: ${target}"
 cargo.exe test --release --target="${target}"
 
-echo "building msi: ${target}"
+log "Building msi: ${target}"
 cargo.exe wix
 
-echo "finished building windows release: ${target}"
+log "Finished building windows release: ${target}"
 

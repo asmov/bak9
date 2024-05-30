@@ -48,8 +48,8 @@ for target in "${MACOS_CROSS_RELEASE_TARGETS[@]}"; do
     cross build --release --target "${target}"
 done
 
-if [ -f "${PROJECT_DIR}/pkg.cfg" ] && [ $SKIP_REMOTE -eq 0 ]; then
-    source "${PROJECT_DIR}/pkg.cfg"
+if [ -f "${PROJECT_DIR}/pkg.cfg.bash" ] && [ $SKIP_REMOTE -eq 0 ]; then
+    source "${PROJECT_DIR}/pkg.cfg.bash"
 
     "${PROJECT_DIR}/tools/remote-build-windows.bash"
 

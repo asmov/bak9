@@ -7,16 +7,16 @@ target="$1"
 
 cd "${PROJECT_DIR}"
 
-echo "began building macos release: ${target}"
+echo "Began building macos release: ${target}"
 
-echo "debug testing: ${target}"
+echo "Debug testing: ${target}"
 cargo test --target="${target}"
 
-echo "building release: ${target}"
+echo "Building release: ${target}"
 cargo build --release --target="${target}"
 
-echo "testing release: ${target}"
+echo "Testing release: ${target}"
 cargo test --release --target="${target}"
 
-echo "finished building macos release: ${target}"
+echo "Finished building macos release: ${target}"
 
