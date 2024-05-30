@@ -1,4 +1,7 @@
 /target
 /Cargo.lock
+/pkg.cfg
 /.vscode
-
+*.snap
+*.bak
+*.bak.*
