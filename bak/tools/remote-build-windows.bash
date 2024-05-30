@@ -2,18 +2,18 @@
 set -euo pipefail
 PROJECT_DIR="$(realpath "$(dirname "$0")/..")"
 source "${PROJECT_DIR}/tools/common.lib.bash"
+source_pkg_cfg
 
-echo "remote building native windows releases"
+echo "began remote building native windows releases"
 
 mkdir -p "${TARGET_DIR}/pkg/msi"
 
 for target in "${WINDOWS_NATIVE_RELEASE_TARGETS[@]}"; do
     echo "remote building native windows release: ${target}"
-    ssh "$WINDOWS_SSH_HOST" "cd "$WINDOWS_SSH_WORKSPACE_DIR" ; cargo build --release --target="${target}""
-    echo "remote building msi: ${target}"
-    ssh "$WINDOWS_SSH_HOST" "cd "$WINDOWS_SSH_WORKSPACE_DIR/${PACKAGE_SUBDIR}" ; cargo wix"
-    mkdir -p "${TARGET_DIR}/${target}/release"
+    ssh "$WINDOWS_SSH_HOST" "cd "${WINDOWS_SSH_WORKSPACE_DIR}/${PACKAGE_SUBDIR}" ; ./tools/build-windows.bash ${target}"
+
     echo "downloading build artifacts: ${target}"
+    mkdir -p "${TARGET_DIR}/${target}/release"
     scp "${WINDOWS_SSH_HOST}:${WINDOWS_SSH_WORKSPACE_DIR}/target/${target}/release/${CARGO_BIN_NAME}.exe" "${TARGET_DIR}/${target}/release"
 done
 

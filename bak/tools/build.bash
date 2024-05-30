@@ -4,6 +4,33 @@ set -euo pipefail
 PROJECT_DIR="$(realpath "$(dirname "$0")/..")"
 source "${PROJECT_DIR}/tools/common.lib.bash"
 
+
+usage() {
+    cat 1>&2 << EOF 
+Usage: $(basename "$0") [OPTIONS]
+Build all releases.
+
+OPTIONS:
+  -l    Local. Skip remote building.
+EOF
+    exit 1
+}
+
+SKIP_REMOTE=0
+
+while getopts ":l" opt; do
+    case "${opt}" in
+        l)
+            SKIP_REMOTE=1
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
+shift $((OPTIND-1))
+
 echo "began building releases"
 
 for target in "${LINUX_RELEASE_TARGETS[@]}"; do
@@ -21,32 +48,22 @@ for target in "${MACOS_CROSS_RELEASE_TARGETS[@]}"; do
     cross build --release --target "${target}"
 done
 
-if [ -f "${PROJECT_DIR}/pkg.cfg" ]; then
+if [ -f "${PROJECT_DIR}/pkg.cfg" ] && [ $SKIP_REMOTE -eq 0 ]; then
     source "${PROJECT_DIR}/pkg.cfg"
 
-    echo "began remote building native windows releases"
+    "${PROJECT_DIR}/tools/remote-build-windows.bash"
 
-    for target in "${WINDOWS_NATIVE_RELEASE_TARGETS[@]}"; do
-    #todo: call remote build instead
-        ssh "$WINDOWS_SSH_HOST" "cd "$WINDOWS_SSH_WORKSPACE_DIR/${PACKAGE_SUBDIR}" && ./tools/build-windows.bash "$target""
-    done
-
-    echo "finished remote building native windows releases"
-
+    "${PROJECT_DIR}/tools/remote-build-macos.bash"
 
     echo "remote building native macos releases"
 
-    for target in "${MACOS_NATIVE_RELEASE_TARGETS[@]}"; do
-        echo "remote building native macos release: ${target}"
-        ssh "$MACOS_SSH_HOST" "cd "$MACOS_SSH_WORKSPACE_DIR" && cargo build --release --target="${target}""
-        mkdir -p "${TARGET_DIR}/${target}/release"
-        echo "downloading build artifacts: ${target}"
-        scp "${MACOS_SSH_HOST}:${MACOS_SSH_WORKSPACE_DIR}/target/${target}/release/${CARGO_BIN_NAME}" "${TARGET_DIR}/${target}/release"
-    done
-
     echo "finished remote building native macos releases"
 else
-    echo "pkg.cfg not found, skipping remote building of native releases"
+    if [ $SKIP_REMOTE -eq 1 ]; then
+        echo "skipping remote building of native releases"
+    else
+        echo "pkg.cfg not found, skipping remote building of native releases"
+    fi
 fi
 
 echo "finished building releases"

@@ -7,19 +7,19 @@ target="$1"
 
 cd "${PROJECT_DIR}"
 
-echo "building windows release: $target"
+echo "began building windows release: ${target}"
 
-echo "testing windows debugging: ${target}"
-cargo test --target="${target}"
+echo "debug testing: ${target}"
+cargo.exe test --target="${target}"
 
-echo "building windows release: ${target}"
-cargo build --release --target="${target}"
+echo "building release: ${target}"
+cargo.exe build --release --target="${target}"
 
-echo "testing windows release: ${target}"
-cargo test --release --target="${target}"
+echo "testing release: ${target}"
+cargo.exe test --release --target="${target}"
 
 echo "building msi: ${target}"
-cargo wix
+cargo.exe wix
 
-echo "finished building windows release"
+echo "finished building windows release: ${target}"
 
