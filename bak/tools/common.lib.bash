@@ -9,8 +9,8 @@ else
     CARGO="cargo"
 fi
 
-WORKSPACE_DIR="$(realpath "$(dirname "$("${CARGO}" locate-project --workspace --message-format=plain)")")"
-PACKAGE_DIR="$(realpath "$(dirname "$("${CARGO}" locate-project --message-format=plain)")")"
+WORKSPACE_DIR="$(realpath "$(dirname "$($CARGO locate-project --workspace --message-format=plain)")")"
+PACKAGE_DIR="$(realpath "$(dirname "$($CARGO locate-project --message-format=plain)")")"
 PACKAGE_SUBDIR="${PACKAGE_DIR##${WORKSPACE_DIR}/}"
 TARGET_DIR="${WORKSPACE_DIR}/target"
 
