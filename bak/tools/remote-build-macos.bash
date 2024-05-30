@@ -8,7 +8,6 @@ echo "began remote building native macos releases"
 
 echo "pulling latest changes from git"
 ssh -t "$MACOS_SSH_HOST" "cd "${MACOS_SSH_WORKSPACE_DIR}/${PACKAGE_SUBDIR}" && eval \$(ssh-agent -s) && ssh-add ${MACOS_SSH_IDENTITY} && git pull"
-echo "hi"
 
 for target in "${MACOS_NATIVE_RELEASE_TARGETS[@]}"; do
     echo "remote building native macos release: ${target}"
