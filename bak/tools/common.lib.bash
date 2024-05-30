@@ -2,10 +2,15 @@
 # Common library for tools
 set -euo pipefail
 
-EXE="${EXE:-}"
+WSL="/mnt/c/Program\ Files/WSL/wsl.exe"
+if [ -f "${WSL}" ]; then
+    CARGO="${WSL} cargo.exe"
+else
+    CARGO="cargo"
+fi
 
-WORKSPACE_DIR="$(realpath "$(dirname "$(cargo${EXE} locate-project --workspace --message-format=plain)")")"
-PACKAGE_DIR="$(realpath "$(dirname "$(cargo${EXE} locate-project --message-format=plain)")")"
+WORKSPACE_DIR="$(realpath "$(dirname "$(${CARGO} locate-project --workspace --message-format=plain)")")"
+PACKAGE_DIR="$(realpath "$(dirname "$(${CARGO} locate-project --message-format=plain)")")"
 PACKAGE_SUBDIR="${PACKAGE_DIR##${WORKSPACE_DIR}/}"
 TARGET_DIR="${WORKSPACE_DIR}/target"
 
