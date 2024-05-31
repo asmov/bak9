@@ -3,6 +3,7 @@
 # Expects tools/build-release.bash to have been run
 set -euo pipefail
 PROJECT_DIR="$(realpath "$(dirname "$0")/..")"
+source "${PROJECT_DIR}/tools/common.lib.bash"
 
 log "Began packaging linux releases"
 

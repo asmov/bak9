@@ -2,6 +2,7 @@
 # Build all releases and then package everything
 set -euo pipefail
 PROJECT_DIR="$(realpath "$(dirname "$0")/..")"
+source "${PROJECT_DIR}/tools/common.lib.bash"
 
 log "Began cleaning"
 
