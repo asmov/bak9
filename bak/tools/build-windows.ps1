@@ -4,7 +4,7 @@ Param (
 )
 
 $PROJECT_DIR = Split-Path ($MyInvocation.MyCommand.Path) -Parent 
-cd $PROJECT_DIR
+Set-Location -Path $PROJECT_DIR -PassThru
 
 function Log {
     Param (
