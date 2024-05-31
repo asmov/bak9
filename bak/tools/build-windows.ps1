@@ -13,7 +13,7 @@ function Log {
     Write-Host $Output
 }
 
-$PROJECT_DIR = Split-Path ($MyInvocation.MyCommand.Path) -Parent 
+$PROJECT_DIR = Split-Path $(Split-Path ($MyInvocation.MyCommand.Path) -Parent) -Parent 
 Set-Location -Path $PROJECT_DIR -PassThru
 Write-Host "$(Get-Location)"
 
