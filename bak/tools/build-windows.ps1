@@ -12,8 +12,8 @@ function Log {
         $Output
     )
 
-    Write-Output "`n[$(Get-Date -Format "HH:mm:ss") bak9] " -NoNewline -ForegroundColor Green
-    Write-Output $Output
+    Write-Host "[$(Get-Date -Format "HH:mm:ss") bak9] " -NoNewline -ForegroundColor Green 
+    Write-Host $Output
 }
 
 Log "Began building windows release: ${Target}"
