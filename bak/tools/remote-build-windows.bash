@@ -11,16 +11,17 @@ log "Began building native windows releases"
 log "Pulling latest changes from git"
 
 if [ -n "${WINDOWS_SSH_GIT_IDENTITY_FILE}" ]; then
-    ssh -t "$WINDOWS_SSH_HOST" "cd "${WINDOWS_SSH_PACKAGE_DIR}" && eval \$(ssh-agent -s) && ssh-add "${WINDOWS_SSH_GIT_IDENTITY_FILE}" && git pull"
+    ssh -t "$WINDOWS_SSH_HOST" "cd "${WINDOWS_SSH_PACKAGE_DIR}" ; ssh-add "${WINDOWS_SSH_GIT_IDENTITY_FILE}" ; git pull"
+    #ssh -t "$WINDOWS_SSH_HOST" "cd "${WINDOWS_SSH_PACKAGE_DIR}" && eval \$(ssh-agent -s) && ssh-add "${WINDOWS_SSH_GIT_IDENTITY_FILE}" && git pull"
 else
-    ssh "$WINDOWS_SSH_HOST" "cd "${WINDOWS_SSH_PACKAGE_DIR}" && git pull"
+    ssh "$WINDOWS_SSH_HOST" "cd "${WINDOWS_SSH_PACKAGE_DIR}" ; git pull"
 fi
 
 mkdir -p "${TARGET_DIR}/pkg/msi"
 
 for target in "${WINDOWS_NATIVE_RELEASE_TARGETS[@]}"; do
     log "remote building native windows release: ${target}"
-    ssh "$WINDOWS_SSH_HOST" "cd "${WINDOWS_SSH_PACKAGE_DIR}" && ./tools/build-windows.bash ${target}"
+    ssh "$WINDOWS_SSH_HOST" "cd "${WINDOWS_SSH_PACKAGE_DIR}" ; ./tools/build-windows.ps1 -Target '${target}'"
 
     log "downloading build artifacts: ${target}"
     mkdir -p "${TARGET_DIR}/${target}/release"
