@@ -7,6 +7,7 @@ PROJECT_DIR="$(realpath "$(dirname "$0")/..")"
 source "${PROJECT_DIR}/tools/common.lib.bash"
 
 log "Began packaging snaps"
+cd "${WORKSPACE_DIR}"
 
 SNAP_DIR="${TARGET_DIR}/pkg/snap"
 rm -rf "${SNAP_DIR}"

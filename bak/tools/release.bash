@@ -12,7 +12,7 @@ cargo clean
 if [ -f "${PROJECT_DIR}/pkg.cfg.bash" ]; then
     source "${PROJECT_DIR}/pkg.cfg.bash"
 
-    ssh "$WINDOWS_SSH_HOST" "cd "$WINDOWS_SSH_WORKSPACE_DIR" && cargo clean"
+    ssh "$WINDOWS_SSH_HOST" "cd "$WINDOWS_SSH_WORKSPACE_DIR" ; cargo clean"
     ssh "$MACOS_SSH_HOST" "cd "$MACOS_SSH_WORKSPACE_DIR" && cargo clean"
 else
     log "No pkg.cfg file found, skipping remote cleaning"

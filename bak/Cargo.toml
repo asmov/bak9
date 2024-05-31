@@ -26,5 +26,5 @@ file_diff = "1"
 
 [package.metadata.generate-rpm]
 assets = [
-    { source = "target/release/bak", dest = "/usr/bin/bak", mode = "755" }
+    { source = "../target/release/bak", dest = "/usr/bin/bak", mode = "755" }
 ]

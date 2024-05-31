@@ -1,6 +1,6 @@
 name: bak9
 version: git
-summary: Utilities for ad-hoc backups
+summary: Typical rotational backups
 description: |
   bak [OPTIONS] FILE [DIR] [COMMAND]
 
@@ -36,12 +36,12 @@ platforms:
     build-for: [armhf]
 
 parts:
-  bak9:
+  bak:
     plugin: rust
     source: .
     build-attributes:
       - enable-patchelf
 
 apps:
-  bak9:
+  bak:
     command: bin/bak
