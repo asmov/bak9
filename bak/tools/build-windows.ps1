@@ -1,6 +1,8 @@
 Param (
     [Parameter(Mandatory)]
     $Target
+    [Parameter(Mandatory)]
+    $PackageName
 )
 
 function Log {
@@ -29,8 +31,7 @@ Log "Testing release: ${Target}"
 cargo test --release --target="${Target}"
 
 Log "Building .msi: ${Target}"
-Write-Output "`n$(Get-Location)"
-cargo wix
+cargo wix --package $PackageName
 
 Log "Finished building windows release: ${Target}"
 
