@@ -22,7 +22,7 @@ mkdir -p "${TARGET_DIR}/pkg/msi"
 
 for target in "${WINDOWS_NATIVE_RELEASE_TARGETS[@]}"; do
     log "remote building native windows release: ${target}"
-    ssh "$WINDOWS_SSH_HOST" "cd "${WINDOWS_SSH_PACKAGE_DIR}" ; Set-ExecutionPolicy Bypass -Scope Process ; ./tools/build-windows.ps1 -Target '${target}'"
+    ssh "$WINDOWS_SSH_HOST" "cd "${WINDOWS_SSH_PACKAGE_DIR}" ; Set-ExecutionPolicy Bypass -Scope Process ; ./tools/build-windows.ps1 -Target '${target}' -Package '${PACKAGE_NAME}'"
 
     log "downloading build artifacts: ${target}"
     mkdir -p "${TARGET_DIR}/${target}/release"
