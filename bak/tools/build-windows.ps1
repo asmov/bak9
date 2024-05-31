@@ -5,6 +5,7 @@ Param (
 
 $PROJECT_DIR = Split-Path ($MyInvocation.MyCommand.Path) -Parent 
 Set-Location -Path $PROJECT_DIR -PassThru
+Write-Output "`n$(Get-Location)"
 
 function Log {
     Param (
