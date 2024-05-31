@@ -1,6 +1,6 @@
 Param (
     [Parameter(Mandatory)]
-    $Target
+    $Target,
     [Parameter(Mandatory)]
     $PackageName
 )
