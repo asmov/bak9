@@ -3,10 +3,6 @@ Param (
     $Target
 )
 
-$PROJECT_DIR = Split-Path ($MyInvocation.MyCommand.Path) -Parent 
-Set-Location -Path $PROJECT_DIR -PassThru
-Write-Output "`n$(Get-Location)"
-
 function Log {
     Param (
         [Parameter(Mandatory)]
@@ -16,6 +12,10 @@ function Log {
     Write-Host "[$(Get-Date -Format "HH:mm:ss") bak9] " -NoNewline -ForegroundColor Green 
     Write-Host $Output
 }
+
+$PROJECT_DIR = Split-Path ($MyInvocation.MyCommand.Path) -Parent 
+Set-Location -Path $PROJECT_DIR -PassThru
+Write-Host "$(Get-Location)"
 
 Log "Began building windows release: ${Target}"
 
