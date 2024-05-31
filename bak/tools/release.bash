@@ -9,8 +9,8 @@ log "Began cleaning"
 cd "$PROJECT_DIR"
 cargo clean
 
-if [ -f "${PROJECT_DIR}/pkg.cfg" ]; then
-    source "${PROJECT_DIR}/pkg.cfg"
+if [ -f "${PROJECT_DIR}/pkg.cfg.bash" ]; then
+    source "${PROJECT_DIR}/pkg.cfg.bash"
 
     ssh "$WINDOWS_SSH_HOST" "cd "$WINDOWS_SSH_WORKSPACE_DIR" && cargo clean"
     ssh "$MACOS_SSH_HOST" "cd "$MACOS_SSH_WORKSPACE_DIR" && cargo clean"
