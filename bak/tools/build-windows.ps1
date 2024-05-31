@@ -12,7 +12,8 @@ function Log {
         $Output
     )
 
-    Write-Output "`n$Output"
+    Write-Output "`n[$(Get-Date -Format "HH:mm:ss") bak9] " -NoNewline -ForegroundColor Green
+    Write-Output $Output
 }
 
 Log "Began building windows release: ${Target}"
@@ -26,7 +27,8 @@ cargo build --release --target="${Target}"
 Log "Testing release: ${Target}"
 cargo test --release --target="${Target}"
 
-Log "Building msi: ${Target}"
+Log "Building .msi: ${Target}"
+Write-Output "`n$(Get-Location)"
 cargo wix
 
 Log "Finished building windows release: ${Target}"
