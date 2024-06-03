@@ -1,7 +1,7 @@
 {
   "productName": "bak9ui",
   "version": "0.0.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "software.asmov.bak9ui",
   "build": {
     "beforeDevCommand": "trunk serve",
     "devUrl": "http://localhost:1420",
