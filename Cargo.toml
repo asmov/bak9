@@ -2,9 +2,11 @@
 resolver = "2"
 members = [
     "bak",
-    "bak9",
-    "bak9ui",
-    "bak9ui/src-tauri"
+    "bak9/cmd",
+    "bak9/ui",
+    "bak9/ui/src-tauri",
+    "bak9/mobile",
+    "bak9/mobile/src-tauri"
 ]
 
 [profile.release]
