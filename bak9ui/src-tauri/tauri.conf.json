@@ -1,5 +1,5 @@
 {
-  "productName": "bak9ui",
+  "productName": "bak9",
   "version": "0.0.0",
   "identifier": "software.asmov.bak9ui",
   "build": {
@@ -12,7 +12,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "bak9ui",
+        "title": "bak9",
         "width": 800,
         "height": 600
       }
