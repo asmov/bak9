@@ -1,3 +1,3 @@
-fn main() {
-    bak9::run();
+fn main() -> std::process::ExitCode {
+    bak9::run()
 }
