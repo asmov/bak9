@@ -1,5 +1,7 @@
 [package]
 name = "bak9"
+description = "Keep your $HOME safe: A rotational backup system for workstation users"
+authors = ["Asmov LLC <development.pub@asmov.software>"]
 version = "0.1.0"
 edition = "2021"
 

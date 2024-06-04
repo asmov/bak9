@@ -1,8 +1,8 @@
 [package]
 name = "bak9-mobile"
 version = "0.1.0"
-description = "Monitoring for bak9 backup systems"
-authors = ["Asmov LLC"]
+description = "Keep your $HOME safe: Monitor rotational backups of your workstations"
+authors = ["Asmov LLC <development.pub@asmov.software>"]
 edition = "2021"
 
 [lib]

@@ -1,5 +1,7 @@
 [package]
 name = "bak9-mobile-ui"
+description = "Keep your $HOME safe: Monitor rotational backups of your workstations"
+authors = ["Asmov LLC <development.pub@asmov.software>"]
 version = "0.1.0"
 edition = "2021"
 

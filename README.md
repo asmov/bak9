@@ -1,6 +1,7 @@
 bak9
 ================================================================================
-Utilities for ad-hoc backups.
+**Keep your $HOME safe:**  
+A rotational **backup** system for workstation **users**.  
 
 
 bak
@@ -55,7 +56,7 @@ Deletes all backups of FILE in DIR.
 
 License (GPL3)
 --------------------------------------------------------------------------------
-bak9: Utilities for ad-hoc backups.  
+bak9: Rotational backup system for workstation users  
 Copyright (C) 2024 Asmov LLC  
 
 This program is free software: you can redistribute it and/or modify

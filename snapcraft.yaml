@@ -1,6 +1,6 @@
 name: bak9
 version: git
-summary: Typical rotational backups
+summary: Keep your $HOME safe - A rotational backup system for workstation users
 description: |
   bak [OPTIONS] FILE [DIR] [COMMAND]
 
