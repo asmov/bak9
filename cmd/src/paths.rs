@@ -11,7 +11,7 @@ pub const BACKUP_LOGS_DIRNAME: &'static str = "logs";
 
 pub const BAK9_HOME: &'static str = "BAK9_HOME";
 
-pub fn config_path(path_str: &str) -> PathBuf {
+pub fn expand_path(path_str: &str) -> PathBuf {
     shellexpand::env(path_str).unwrap().to_string().into()
 }
  

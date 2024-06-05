@@ -19,6 +19,8 @@ mod tests {
  
     static TESTING: testing::StaticModule = testing::module(|| {
         testing::integration(module_path!())
+            .base_temp_dir(env!("CARGO_TARGET_TMPDIR"))
+            .using_temp_dir()
             .setup(|_| {
                 std::env::set_var(paths::BAK9_HOME,
                     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -31,12 +33,21 @@ mod tests {
             .build()
     });
 
-    fn read_config() -> config::BackupConfig {
+    fn read_config(tmp_dir: &Path) -> config::BackupConfig {
         let config_path = paths::home_dir().unwrap()
             .join(paths::HOME_CONFIG_DIR)
             .join(paths::CONFIG_FILENAME);
 
-        config::BackupConfig::read(&config_path).unwrap()
+        let mut config = config::BackupConfig::read(&config_path).unwrap();
+        
+        config.backup_storage_dir = shellexpand::env_with_context(&config.backup_storage_dir, |var| {
+            match var.as_ref() {
+                "BAK9_TMP_DIR" => Ok(Some(tmp_dir.to_str().unwrap().to_string())),
+                _ => Err(std::env::VarError::NotPresent)
+            }
+        }).unwrap().to_string();
+
+        config
     }
 
 
@@ -68,22 +79,17 @@ mod tests {
         paths::setup_backup_dirs(config, true).unwrap();
     }
 
-    fn wipe_tmp_dirs() {
-        let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("strg");
-        if dir.exists() {
-            fs::remove_dir_all(&dir).unwrap();
-        }
-    }
-
-    const TEST_CONFIG_BACKUP_DIR: &'static str = "$BAK9_TMP_DIR/strg/backup";
-
     #[named]
     #[test]
     fn test_read_config() {
-        let _test = TESTING.test(function_name!());
-        let config = read_config();
-        dbg!(&config);
-        assert_eq!(config.backup_storage_dir, TEST_CONFIG_BACKUP_DIR);
+        let test = TESTING.test(function_name!())
+            .using_temp_dir()
+            .build();
+
+        let tmp_dir = test.temp_dir();
+        let config = read_config(tmp_dir);
+        //dbg!(&config);
+        assert_eq!(config.backup_storage_dir, format!("{}/strg/backup", tmp_dir.to_str().unwrap()));
         assert_eq!(config.backup("home-testusr").unwrap().archives.len(), 2);
         assert_eq!(config.backup("home-testusr").unwrap().archive("quarterly").unwrap().max_archives, 4);
     }
@@ -91,8 +97,11 @@ mod tests {
     #[named]
     #[test]
     fn test_setup_backup_dirs() {
-        let _test = TESTING.test(function_name!());
-        let config = read_config();
+        let test = TESTING.test(function_name!())
+            .using_temp_dir()
+            .build();
+
+        let config = read_config(test.temp_dir());
         paths::setup_backup_dirs(&config, true).unwrap();
         assert!(config.backup_storage_dir_path().exists());
         assert!(config.backup_storage_dir_path().join(paths::BACKUP_ARCHIVE_DIRNAME).exists());
@@ -180,9 +189,11 @@ mod tests {
     #[named]
     #[test]
     fn test_backup_and_archive_mechanics() {
-        let _test = TESTING.test(function_name!());
-        let config = read_config();
-        wipe_tmp_dirs();
+        let test = TESTING.test(function_name!())
+            .using_temp_dir()
+            .build();
+
+        let config = read_config(test.temp_dir());
         paths::setup_backup_dirs(&config, true).unwrap();
         let host = hostname::get().unwrap().into_string().unwrap();
 
@@ -203,10 +214,12 @@ mod tests {
     #[named]
     #[test]
     fn test_scheduling_logic() {
-        let _test = TESTING.test(function_name!());
-        let config = read_config();
+        let test = TESTING.test(function_name!())
+            .using_temp_dir()
+            .build();
+
+        let config = read_config(test.temp_dir());
         let host = hostname::get().unwrap().into_string().unwrap();
-        wipe_tmp_dirs();
         paths::setup_backup_dirs(&config, true).unwrap();
         let tomorrow = chrono::Local::now() + chrono::Duration::days(1);
         let expected_next = tomorrow

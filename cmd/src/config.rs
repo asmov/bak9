@@ -85,7 +85,7 @@ impl BackupConfig {
     }
 
     pub fn backup_storage_dir_path(&self) -> PathBuf {
-        paths::config_path(&self.backup_storage_dir)
+        paths::expand_path(&self.backup_storage_dir)
     }
 
     pub fn schedule<'cfg>(&'cfg self, schedule_name: &str) -> Result<&'cfg BackupConfigSchedule> {
@@ -259,7 +259,7 @@ pub struct BackupConfigBackup {
 
 impl BackupConfigBackup {
     pub fn source_dir_path(&self) -> PathBuf {
-        paths::config_path(&self.source_dir)
+        paths::expand_path(&self.source_dir)
     }
 
     pub fn archive<'cfg>(&'cfg self, schedule_name: &str) -> Result<&'cfg BackupConfigArchive> {
