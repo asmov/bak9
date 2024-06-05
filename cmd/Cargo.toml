@@ -13,3 +13,8 @@ serde = { version = "1", features = ["derive"] }
 thiserror = "1"
 toml = "0"
 validator = { version = "0", features = ["derive"] }
+shellexpand = "2"
+
+[dev-dependencies]
+function_name = "0"
+asmov-testing = { path = "../../common/testing" }

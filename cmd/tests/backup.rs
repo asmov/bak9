@@ -8,9 +8,28 @@ use cron;
 mod tests {
     use std::os::unix::fs::MetadataExt;
     use chrono::NaiveTime;
+    use asmov_testing as testing;
     use bak9::{config, paths, backup, schedule, cmd::{rsync, xz}};
-
+    use function_name::named;
     use super::*;
+
+    pub const TEST_HOME_DIR: &'static str = "tests/fixtures/fs/home/testusr";
+    pub const BAK9_TMP_DIR: &'static str = "BAK9_TMP_DIR";
+    pub const BAK9_TESTS_DIR: &'static str = "BAK9_TESTS_DIR";
+ 
+    static TESTING: testing::StaticModule = testing::module(|| {
+        testing::integration(module_path!())
+            .setup(|_| {
+                std::env::set_var(paths::BAK9_HOME,
+                    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                        .join(TEST_HOME_DIR)
+                );
+
+                std::env::set_var(BAK9_TMP_DIR, PathBuf::from(env!("CARGO_TARGET_TMPDIR")));
+                std::env::set_var(BAK9_TESTS_DIR, PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests"));
+            })
+            .build()
+    });
 
     fn read_config() -> config::BackupConfig {
         let config_path = paths::home_dir().unwrap()
@@ -20,7 +39,6 @@ mod tests {
         config::BackupConfig::read(&config_path).unwrap()
     }
 
-    const TEST_CONFIG_BACKUP_DIR: &'static str = "$CARGO_TARGET_TMPDIR/strg/backup";
 
     fn cmd_diff(source_dir: &Path, dest_dir: &Path) -> std::process::Command {
         let mut cmd = std::process::Command::new("diff");
@@ -57,8 +75,12 @@ mod tests {
         }
     }
 
+    const TEST_CONFIG_BACKUP_DIR: &'static str = "$BAK9_TMP_DIR/strg/backup";
+
+    #[named]
     #[test]
     fn test_read_config() {
+        let _test = TESTING.test(function_name!());
         let config = read_config();
         dbg!(&config);
         assert_eq!(config.backup_storage_dir, TEST_CONFIG_BACKUP_DIR);
@@ -66,8 +88,10 @@ mod tests {
         assert_eq!(config.backup("home-testusr").unwrap().archive("quarterly").unwrap().max_archives, 4);
     }
 
+    #[named]
     #[test]
     fn test_setup_backup_dirs() {
+        let _test = TESTING.test(function_name!());
         let config = read_config();
         paths::setup_backup_dirs(&config, true).unwrap();
         assert!(config.backup_storage_dir_path().exists());
@@ -153,8 +177,10 @@ mod tests {
         assert!(output.status.success());
     }
 
+    #[named]
     #[test]
     fn test_backup_and_archive_mechanics() {
+        let _test = TESTING.test(function_name!());
         let config = read_config();
         wipe_tmp_dirs();
         paths::setup_backup_dirs(&config, true).unwrap();
@@ -174,8 +200,10 @@ mod tests {
         }
     }
 
+    #[named]
     #[test]
     fn test_scheduling_logic() {
+        let _test = TESTING.test(function_name!());
         let config = read_config();
         let host = hostname::get().unwrap().into_string().unwrap();
         wipe_tmp_dirs();
