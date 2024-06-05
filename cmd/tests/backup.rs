@@ -36,7 +36,7 @@ mod tests {
     fn read_config(tmp_dir: &Path) -> config::BackupConfig {
         let config_path = paths::home_dir().unwrap()
             .join(paths::HOME_CONFIG_DIR)
-            .join(paths::CONFIG_FILENAME);
+            .join(paths::BAK9_CONFIG_FILENAME);
 
         let mut config = config::BackupConfig::read(&config_path).unwrap();
         
@@ -76,7 +76,7 @@ mod tests {
     }
 
     fn _setup_tmp_dirs(config: &config::BackupConfig) {
-        paths::setup_backup_dirs(config, true).unwrap();
+        paths::setup_backup_storage_dir(config).unwrap();
     }
 
     #[named]
@@ -102,7 +102,7 @@ mod tests {
             .build();
 
         let config = read_config(test.temp_dir());
-        paths::setup_backup_dirs(&config, true).unwrap();
+        paths::setup_backup_storage_dir(&config).unwrap();
         assert!(config.backup_storage_dir_path().exists());
         assert!(config.backup_storage_dir_path().join(paths::BACKUP_ARCHIVE_DIRNAME).exists());
         assert!(config.backup_storage_dir_path().join(paths::BACKUP_FULL_DIRNAME).exists());
@@ -194,7 +194,7 @@ mod tests {
             .build();
 
         let config = read_config(test.temp_dir());
-        paths::setup_backup_dirs(&config, true).unwrap();
+        paths::setup_backup_storage_dir(&config).unwrap();
         let host = hostname::get().unwrap().into_string().unwrap();
 
         for backup_cfg in &config.backups {
@@ -220,7 +220,7 @@ mod tests {
 
         let config = read_config(test.temp_dir());
         let host = hostname::get().unwrap().into_string().unwrap();
-        paths::setup_backup_dirs(&config, true).unwrap();
+        paths::setup_backup_storage_dir(&config).unwrap();
         let tomorrow = chrono::Local::now() + chrono::Duration::days(1);
         let expected_next = tomorrow
             .with_time(NaiveTime::from_hms_opt(2, 30, 0).unwrap()).unwrap();

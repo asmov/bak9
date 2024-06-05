@@ -1,8 +1,8 @@
 use std::{fs, path::{PathBuf, Path}};
-use crate::{config, error::{Error, Result}, testing};
+use crate::{config, error::{Error, Result}};
 
-pub const HOME_CONFIG_DIR: &'static str = ".config/bak9/backup";
-pub const CONFIG_FILENAME: &'static str = "config.toml";
+pub const HOME_CONFIG_DIR: &'static str = ".config/bak9";
+pub const BAK9_CONFIG_FILENAME: &'static str = "bak9.toml";
 
 pub const BACKUP_ARCHIVE_DIRNAME: &'static str = "archive";
 pub const BACKUP_FULL_DIRNAME: &'static str = "full";
@@ -29,7 +29,7 @@ pub fn home_dir() -> Result<PathBuf> {
 
 pub fn setup_home_config(force: bool) -> Result<()> {
     let home_config_dir = home_dir()?.join(HOME_CONFIG_DIR);
-    let home_config_file = home_config_dir.join(CONFIG_FILENAME);
+    let home_config_file = home_config_dir.join(BAK9_CONFIG_FILENAME);
 
     if !home_config_dir.exists() {
         fs::create_dir_all(&home_config_dir)
@@ -44,24 +44,42 @@ pub fn setup_home_config(force: bool) -> Result<()> {
     Ok(())
 }
 
-pub fn setup_backup_dirs(config: &config::BackupConfig, force: bool) -> Result<()> {
-    let backup_dir = config.backup_storage_dir_path();
+pub fn backup_storage_subdirs(backup_storage_dir: &Path) -> Vec<PathBuf> {
+    vec![
+        backup_storage_dir.join(BACKUP_ARCHIVE_DIRNAME),
+        backup_storage_dir.join(BACKUP_FULL_DIRNAME),
+        backup_storage_dir.join(BACKUP_INCREMENTAL_DIRNAME),
+        backup_storage_dir.join(BACKUP_LOGS_DIRNAME)
+    ]
+}
 
-    if backup_dir.exists() && !force {
-        return Ok(());
+pub fn setup_backup_storage_dir(config: &config::BackupConfig) -> Result<()> {
+    let backup_storage_dir = config.backup_storage_dir_path();
+
+    if !backup_storage_dir.exists() {
+        fs::create_dir_all(&backup_storage_dir)
+            .map_err(|e| Error::new_file_io(&backup_storage_dir, e))?;
     }
 
-    let dirs: [&Path; 5] = [
-        &backup_dir,
-        &backup_dir.join(BACKUP_ARCHIVE_DIRNAME),
-        &backup_dir.join(BACKUP_FULL_DIRNAME),
-        &backup_dir.join(BACKUP_INCREMENTAL_DIRNAME),
-        &backup_dir.join(BACKUP_LOGS_DIRNAME)
-    ];
+    let backup_storage_dir = backup_storage_dir.canonicalize()
+        .map_err(|e| Error::new_file_io(&backup_storage_dir, e))?;
 
-    for dir in dirs {
-        fs::create_dir_all(dir)
-            .map_err(|e| Error::new_file_io(&backup_dir, e))?;
+    for subdir in backup_storage_subdirs(&backup_storage_dir) {
+        fs::create_dir_all(&subdir)
+            .map_err(|e| Error::new_file_io(&subdir, e))?;
+    }
+
+    Ok(())
+}
+
+pub fn verify_backup_dirs(config: &config::BackupConfig) -> Result<()> {
+    let backup_storage_dir = &config.backup_storage_dir_path();
+    let backup_storage_dir = backup_storage_dir.canonicalize()
+        .map_err(|e| Error::new_configured_path(&backup_storage_dir, config::KEY_BACKUP_STORAGE_DIR, e))?;
+
+    for subdir in backup_storage_subdirs(&backup_storage_dir) {
+        subdir.canonicalize()
+            .map_err(|e| Error::new_configured_path(&backup_storage_dir, config::KEY_BACKUP_STORAGE_DIR, e))?;
     }
 
     Ok(())

@@ -1,56 +1,21 @@
 use std::{fs, path::{PathBuf, Path}};
 use validator::{Validate, ValidationError};
+use colored::Colorize;
 use crate::{error::{Error, Result}, paths};
 
-pub const CONFIG_DEFAULTS: &'static str = r#"
-backup_storage_dir = "/storage/backup"
+pub const KEY_BACKUP_STORAGE_DIR: &'static str = "backup_storage_dir";
 
-[[schedule]]
-name = "daily"
-minute = 30
-hour = 2
+pub fn read_config() -> Result<BackupConfig> {
+    let config_path = paths::home_dir()?
+        .join(paths::HOME_CONFIG_DIR)
+        .join(paths::BAK9_CONFIG_FILENAME);
 
-[[schedule]]
-name = "weekly"
-minute = 30
-hour = 2
-day_of_week = "sun"
-
-[[schedule]]
-name = "monthly"
-minute = 30
-hour = 2
-day_of_month = 1
-
-[[schedule]]
-name = "quarterly"
-minute = 30
-hour = 2
-day_of_month = 1
-months = [1, 4, 7, 10]
-
-[[schedule]]
-name = "annual"
-minute = 30
-hour = 2
-day_of_month = 1
-month = 1
-
-[[backup]]
-name = "home-$USER"
-source_dir = "$HOME"
-full_schedule = "monthly"
-incremental_schedule = "daily"
-max_full = 3
-
-[[backup.archive]]
-schedule = "quarterly"
-max_archives = "4"
-
-[[backup.archive]]
-schedule = "annual"
-max_archives = "3"
-"#;
+    if !config_path.exists() {
+        Err(Error::ConfigFileNotFound { path: config_path.to_str().unwrap().cyan().to_string(), })
+    } else {
+        BackupConfig::read(&config_path)
+    }
+}
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, validator::Validate)]
 #[validate]
@@ -80,7 +45,7 @@ impl BackupConfig {
     pub fn read_home() -> Result<Self> {
         let config_filepath = paths::home_dir()?
             .join(paths::HOME_CONFIG_DIR)
-            .join(paths::CONFIG_FILENAME);
+            .join(paths::BAK9_CONFIG_FILENAME);
         Self::read(&config_filepath)
     }
 
@@ -277,3 +242,54 @@ pub struct BackupConfigArchive {
     pub schedule: String,
     pub max_archives: u32,
 }
+
+pub const CONFIG_DEFAULTS: &'static str = r#"
+backup_storage_dir = "/storage/backup"
+
+[[schedule]]
+name = "daily"
+minute = 30
+hour = 2
+
+[[schedule]]
+name = "weekly"
+minute = 30
+hour = 2
+day_of_week = "sun"
+
+[[schedule]]
+name = "monthly"
+minute = 30
+hour = 2
+day_of_month = 1
+
+[[schedule]]
+name = "quarterly"
+minute = 30
+hour = 2
+day_of_month = 1
+months = [1, 4, 7, 10]
+
+[[schedule]]
+name = "annual"
+minute = 30
+hour = 2
+day_of_month = 1
+month = 1
+
+[[backup]]
+name = "home-$USER"
+source_dir = "$HOME"
+full_schedule = "monthly"
+incremental_schedule = "daily"
+max_full = 3
+
+[[backup.archive]]
+schedule = "quarterly"
+max_archives = "4"
+
+[[backup.archive]]
+schedule = "annual"
+max_archives = "3"
+"#;
+
