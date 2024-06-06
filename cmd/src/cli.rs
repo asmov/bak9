@@ -3,23 +3,54 @@ use clap::{Parser, Subcommand};
 use colored::Colorize;
 
 #[derive(Parser, Debug)]
-#[command(version, about)]
+#[command(version, about = "Manages a rotational backup system")]
 pub struct Cli {
-    #[clap(short, help = "Configuration file [non-default]", value_parser = validate_config_file)]
+    #[arg(short, help = "Configuration file [non-default]", value_parser = validate_config_file)]
     pub config_file: Option<PathBuf>,
+
+    #[arg(short, help = "Force the operation without confirmation")]
+    pub force: bool,
 
     #[command(subcommand)]
     pub subcommand: Command,
-
 }
-
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
-    #[command(name = "backup", about = "Performs all scheduled backups as configured")]
-    Backup,
-    #[command(name = "config", about = "Initializes or validates the user's bak9 configuration")]
-    Config 
+    #[command(subcommand, name = "backup", about = "Performs backups as configured")]
+    Backup(BackupCommand),
+    #[command(subcommand, name = "config", about = "Manages configuration")]
+    Config(ConfigCommand),
+    #[command(subcommand, name = "log", about = "Reviews logs")]
+    Log(LogCommand),
+    #[command(name = "summary", alias="info", about = "Reviews a summary of recent backups")]
+    Summary
+}
+
+#[derive(Subcommand, Debug)]
+pub enum BackupCommand {
+    #[command(name = "scheduled", alias = "cron", about = "Performs backups as scheduled")]
+    Scheduled
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ConfigCommand {
+    #[command(name = "setup", about = "Initializes the user's bak9 configuration")]
+    Setup,
+    #[command(name = "edit", about = "Opens the bak9 configuration in their editor")]
+    Edit,
+    #[command(name = "verify", about = "Verifies the bak9 configuration")]
+    Verify,
+    #[command(name = "show", about = "Displays the bak9 configuration")]
+    Show 
+}
+
+#[derive(Subcommand, Debug)]
+pub enum LogCommand {
+    #[command(name = "list", about = "Lists backup log files")]
+    List,
+    #[command(name = "show", about = "Displays the log for a backup")]
+    Show 
 }
 
 fn validate_config_file(path: &str) -> Result<PathBuf, String> {

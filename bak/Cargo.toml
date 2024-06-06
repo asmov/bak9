@@ -14,6 +14,7 @@ name = "bak"
 path = "src/main.rs"
 
 [dependencies]
+bak9-os = { path = "../os" }
 clap = { version = "4", features = ["derive"] }
 colored = "2"
 file_diff = "1"

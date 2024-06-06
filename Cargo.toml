@@ -7,7 +7,7 @@ members = [
     "ui/src-tauri",
     "mobile",
     "mobile/src-tauri"
-]
+, "os"]
 
 [profile.release]
 strip = "symbols"

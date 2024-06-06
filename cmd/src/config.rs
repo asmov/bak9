@@ -1,6 +1,6 @@
 use std::{fs, path::{PathBuf, Path}};
 use validator::{Validate, ValidationError};
-use crate::{cli, error::{Error, Result}, paths};
+use crate::{Error, Result, cli, paths};
 
 pub const KEY_BACKUP_STORAGE_DIR: &'static str = "backup_storage_dir";
 
