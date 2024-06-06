@@ -195,7 +195,7 @@ fn confirm_wipe(source_file: &Path, dir: &Path, force: bool) -> bool {
         "confirm:".bright_yellow(), 
         source_file.filename_str().expect(E_FILENAME).cyan(),
         sanitize_path_str(dir.to_str().expect(E_STR)).cyan(),
-        "(y/N):".magenta());
+        "[y/N]:".magenta());
 
     std::io::stdout().flush()
         .expect("Failed to flush stdout");
