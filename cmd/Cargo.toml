@@ -6,6 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+bak9-os = { path = "../os" }
 chrono = "0"
 cron = "0"
 hostname = "0"

@@ -263,37 +263,36 @@ pub struct BackupConfigArchive {
     pub max_archives: u32,
 }
 
-pub const CONFIG_DEFAULTS: &'static str = r#"
-backup_storage_dir = "/storage/backup"
+pub const CONFIG_DEFAULTS: &'static str = r#"backup_storage_dir = "/storage/backup"
 
 [[schedule]]
 name = "daily"
-minute = 30
-hour = 2
+minute = 0
+hour = 0
 
 [[schedule]]
 name = "weekly"
-minute = 30
-hour = 2
+minute = 0
+hour = 0
 day_of_week = "sun"
 
 [[schedule]]
 name = "monthly"
-minute = 30
-hour = 2
+minute = 0
+hour = 0
 day_of_month = 1
 
 [[schedule]]
 name = "quarterly"
-minute = 30
-hour = 2
+minute = 0
+hour = 0
 day_of_month = 1
 months = [1, 4, 7, 10]
 
 [[schedule]]
 name = "annual"
-minute = 30
-hour = 2
+minute = 0
+hour = 0
 day_of_month = 1
 month = 1
 

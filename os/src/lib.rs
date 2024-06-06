@@ -1,6 +1,16 @@
-use std::{env, fs, io, path::{Path, PathBuf}};
+#[cfg(target_os = "linux")]
+pub mod linux;
+#[cfg(target_os = "macos")]
+pub mod macos;
+#[cfg(target_os = "windows")]
+pub mod windows;
+
+use std::{process, env, fs, io, path::{Path, PathBuf}};
 
 const E_STR: &str = "Failed to convert to string"; 
+
+#[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+const E_UNSUPPORTED_OS: &str = "Unsupported OS";
 
 pub fn sanitize_cmd_path(path: &Path) -> &str {
     let path = path.to_str().expect(E_STR);
@@ -120,6 +130,60 @@ fn macos_user_app_data_dir() -> io::Result<PathBuf> {
 
 }
 
-//pub fn run_best_editor(file: &Path) -> 
+pub fn is_gui() -> bool {
+    #[cfg(target_os = "linux")]
+    return linux::is_gui();
+    #[cfg(target_os = "macos")]
+    return macos::is_gui();
+    #[cfg(target_os = "windows")]
+    return windows::is_gui();
+    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+    unimplemented!(E_UNSUPPORTED_OS)
+}
 
+pub fn run_best_editor(file: &Path, child_process: bool) -> anyhow::Result<CommandReturn> {
+    #[cfg(target_os = "linux")]
+    return linux::run_best_editor(file, child_process);
+    #[cfg(target_os = "macos")]
+    return macos::run_best_editor(file, child_process);
+    #[cfg(target_os = "windows")]
+    return windows::run_best_editor(file, child_process);
+    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+    unimplemented!(E_UNSUPPORTED_OS)
+}
+pub enum CommandReturn {
+    Output(process::Output),
+    Child(process::Child),
+}
+
+impl CommandReturn {
+    pub fn run(mut command: process::Command, child_process: bool) -> anyhow::Result<Self> {
+        if child_process { 
+            Ok(Self::Child(command.spawn()?))
+        } else {
+            Ok(Self::Output(command.output()?))
+        }
+    }
+
+    pub fn is_child_process(self) -> bool {
+        match self {
+            Self::Child(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn unwrap_child(self) -> process::Child {
+        match self {
+            Self::Child(child) => child,
+            _ => panic!("Not a child process"),
+        }
+    }
+
+    pub fn unwrap_output(self) -> process::Output {
+        match self {
+            Self::Output(output) => output,
+            _ => panic!("Not an output"),
+        }
+    }
+}
 

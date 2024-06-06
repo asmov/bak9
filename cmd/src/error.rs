@@ -22,6 +22,9 @@ pub enum Error {
 
     #[error("Config item {} not found for schema {}", name.cyan(), schema.cyan())]
     ConfigReferenceNotFound { schema: &'static str, name: String },
+
+    #[error("{0}")]
+    Generic(String)
 }
 
 impl Error {
