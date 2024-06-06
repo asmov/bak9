@@ -1,20 +1,40 @@
 use std::{fs, path::{PathBuf, Path}};
 use validator::{Validate, ValidationError};
-use colored::Colorize;
-use crate::{error::{Error, Result}, paths};
+use crate::{cli, error::{Error, Result}, paths};
 
 pub const KEY_BACKUP_STORAGE_DIR: &'static str = "backup_storage_dir";
 
-pub fn read_config() -> Result<BackupConfig> {
-    let config_path = paths::home_dir()?
-        .join(paths::HOME_CONFIG_DIR)
-        .join(paths::BAK9_CONFIG_FILENAME);
-
-    if !config_path.exists() {
-        Err(Error::ConfigFileNotFound { path: config_path.to_str().unwrap().cyan().to_string(), })
+pub fn select_config_path(cli: &cli::Cli) -> Result<PathBuf> {
+    if let Some(config_path) = &cli.config_file {
+        Ok(config_path.clone())
     } else {
-        BackupConfig::read(&config_path)
+        default_config_path()
     }
+}
+
+pub fn default_config_path() -> Result<PathBuf> {
+    Ok(paths::home_dir()?
+        .join(paths::HOME_CONFIG_DIR)
+        .join(paths::BAK9_CONFIG_FILENAME))
+}
+
+pub fn read_config(config_path: Option<&PathBuf>) -> Result<BackupConfig> {
+    let config_path = if let Some(config_path) = config_path {
+        if !config_path.exists() {
+            return Err(Error::ConfigFileNotFound { path: config_path.to_str().unwrap().to_string() })
+        } else {
+            PathBuf::from(config_path)
+        }
+    } else {
+        let default_config_path = default_config_path()?;
+        if !default_config_path.exists() {
+            return Err(Error::DefaultConfigFileNotFound { path: default_config_path.to_str().unwrap().to_string() })
+        } else {
+            default_config_path
+        }
+    };
+
+    BackupConfig::read(&config_path)
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, validator::Validate)]
@@ -56,13 +76,13 @@ impl BackupConfig {
     pub fn schedule<'cfg>(&'cfg self, schedule_name: &str) -> Result<&'cfg BackupConfigSchedule> {
         self.schedules.iter()
             .find(|s| s.name == schedule_name)
-            .ok_or_else(|| Error::ConfigNotFound { schema: "Schedule", identifier: schedule_name.to_string() })
+            .ok_or_else(|| Error::ConfigReferenceNotFound { schema: "[schedule]", name: schedule_name.to_string() })
     }
 
     pub fn backup<'cfg>(&'cfg self, backup_name: &str) -> Result<&'cfg BackupConfigBackup> {
         self.backups.iter()
             .find(|b| b.name == backup_name)
-            .ok_or_else(|| Error::ConfigNotFound { schema: "Backup", identifier: backup_name.to_string() })
+            .ok_or_else(|| Error::ConfigReferenceNotFound { schema: "[backup]", name: backup_name.to_string() })
     }
 }
 
@@ -230,9 +250,9 @@ impl BackupConfigBackup {
     pub fn archive<'cfg>(&'cfg self, schedule_name: &str) -> Result<&'cfg BackupConfigArchive> {
         self.archives.iter()
             .find(|b| b.schedule == schedule_name)
-            .ok_or_else(|| Error::ConfigNotFound {
+            .ok_or_else(|| Error::ConfigReferenceNotFound {
                 schema: "Archive",
-                identifier: format!("{}:{}", self.name.to_string(), schedule_name.to_string())
+                name: format!("{}:{}", self.name.to_string(), schedule_name.to_string())
             })
     }
 }
@@ -286,10 +306,10 @@ max_full = 3
 
 [[backup.archive]]
 schedule = "quarterly"
-max_archives = "4"
+max_archives = 4
 
 [[backup.archive]]
 schedule = "annual"
-max_archives = "3"
+max_archives = 3
 "#;
 

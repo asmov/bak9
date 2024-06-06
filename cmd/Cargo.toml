@@ -15,6 +15,7 @@ toml = "0"
 validator = { version = "0", features = ["derive"] }
 shellexpand = "2"
 colored = "2"
+clap = { version = "4", features = ["derive"] }
 
 [dev-dependencies]
 function_name = "0"

@@ -6,17 +6,20 @@ pub enum Error {
     #[error("Config file error: {path} :> {cause}")]
     ConfigFile { path: String, cause: String },
 
-    #[error("Config file {path} not found. Have you ran `{}` yet?", "bak9 setup".yellow())]
+    #[error("Config file {} not found. Have you ran {} yet?", path.cyan(), "bak9 config".yellow())]
+    DefaultConfigFileNotFound { path: String },
+
+    #[error("Config file {} not found.", path.cyan())]
     ConfigFileNotFound { path: String },
 
     #[error("File IO error: {path} :> {cause}")]
     FileIO{ path: String, cause: String },
 
-    #[error("Path {path} not accessible. Specified by config {config_key} :: {cause}")]
+    #[error("Path {} specified by config key {} is not accessible :: {cause}", path.cyan(), config_key.cyan())]
     ConfiguredPathNotAccessible{ config_key: String, path: String, cause: String },
 
-    #[error("Config {schema} not found: {identifier}")]
-    ConfigNotFound { schema: &'static str, identifier: String },
+    #[error("Config item {} not found for schema {}", name.cyan(), schema.cyan())]
+    ConfigReferenceNotFound { schema: &'static str, name: String },
 }
 
 impl Error {
@@ -36,8 +39,8 @@ impl Error {
 
     pub fn new_configured_path(path: &Path, config_key: &str, e: std::io::Error) -> Self {
         Self::ConfiguredPathNotAccessible {
-            config_key: config_key.cyan().to_string(),
-            path: path.to_str().unwrap().cyan().to_string(),
+            config_key: config_key.to_string(),
+            path: path.to_str().unwrap().to_string(),
             cause: e.to_string()
         }
     }
