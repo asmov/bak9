@@ -27,7 +27,6 @@
     }
 
 </style>
-<rect width="900" height="900" fill="red"/>
 
 <rect class="outer" x="10" y="10" width="880" height="880"/>
 
