@@ -5,8 +5,6 @@
         font-weight: bold;
         font-family: "DejaVu Sans", sans-serif;
         fill: orange;
-        text-anchor: middle;
-        dominant-baseline: middle;
     }
 
     rect.outer {
@@ -33,6 +31,6 @@
 <rect class="inner" x="10" y="10" width="820" height="820"/>
 <rect class="inner" x="10" y="10" width="760" height="760"/>
 
-<text x="390" y="470">9</text>
+<text x="150" y="630">9</text>
     
 </svg>
