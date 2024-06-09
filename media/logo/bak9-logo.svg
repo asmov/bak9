@@ -18,12 +18,6 @@
         fill: black;
         stroke-width: 20;
     }
-
-    line {
-        stroke: white;
-        stroke-width: 20;
-    }
-
 </style>
 
 <rect class="outer" x="10" y="10" width="880" height="880"/>
