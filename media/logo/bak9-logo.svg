@@ -3,7 +3,7 @@
     text {
         font-size: 700px;
         font-weight: bold;
-        font-family: "DejaVu Sans";
+        font-family: "DejaVu Sans", sans-serif;
         fill: orange;
         text-anchor: middle;
         dominant-baseline: middle;
