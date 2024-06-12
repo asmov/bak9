@@ -1,8 +1,4 @@
-use std::{fs, path::{Path, PathBuf}};
-use chrono;
-use hostname;
-use cron;
-
+mod test_common;
 
 #[cfg(test)]
 mod tests {
@@ -11,24 +7,25 @@ mod tests {
     use asmov_testing as testing;
     use bak9::{config, paths, backup, schedule, cmd::{rsync, xz}};
     use function_name::named;
+    use std::{fs, path::{Path, PathBuf}};
+    use chrono;
+    use hostname;
+    use cron;
     use super::*;
 
-    pub const TEST_HOME_DIR: &'static str = "tests/testing/fixtures/fs/home/testusr";
-    pub const BAK9_TMP_DIR: &'static str = "BAK9_TMP_DIR";
-    pub const BAK9_TESTS_DIR: &'static str = "BAK9_TESTS_DIR";
- 
     static TESTING: testing::StaticModule = testing::module(|| {
         testing::integration(module_path!())
             .base_temp_dir(env!("CARGO_TARGET_TMPDIR"))
             .using_temp_dir()
-            .setup(|_| {
+            .using_fixture_dir()
+            .setup(|module_test| {
                 std::env::set_var(paths::BAK9_HOME,
-                    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                        .join(TEST_HOME_DIR)
+                    PathBuf::from(module_test.fixture_dir())
+                        .join(test_common::FIXTURE_USER_HOME)
                 );
 
-                std::env::set_var(BAK9_TMP_DIR, PathBuf::from(env!("CARGO_TARGET_TMPDIR")));
-                std::env::set_var(BAK9_TESTS_DIR, PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests"));
+                std::env::set_var(test_common::BAK9_TMP_DIR, PathBuf::from(env!("CARGO_TARGET_TMPDIR")));
+                std::env::set_var(test_common::BAK9_TESTS_DIR, PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests"));
             })
             .build()
     });
@@ -76,7 +73,7 @@ mod tests {
     }
 
     fn _setup_tmp_dirs(config: &config::BackupConfig) {
-        paths::setup_backup_storage_dir(config).unwrap();
+        paths::setup_backup_storage_dir(&config.backup_storage_dir_path()).unwrap();
     }
 
     #[named]
@@ -102,7 +99,7 @@ mod tests {
             .build();
 
         let config = read_config(test.temp_dir());
-        paths::setup_backup_storage_dir(&config).unwrap();
+        paths::setup_backup_storage_dir(&config.backup_storage_dir_path()).unwrap();
         assert!(config.backup_storage_dir_path().exists());
         assert!(config.backup_storage_dir_path().join(paths::BACKUP_ARCHIVE_DIRNAME).exists());
         assert!(config.backup_storage_dir_path().join(paths::BACKUP_FULL_DIRNAME).exists());
@@ -194,7 +191,7 @@ mod tests {
             .build();
 
         let config = read_config(test.temp_dir());
-        paths::setup_backup_storage_dir(&config).unwrap();
+        paths::setup_backup_storage_dir(&config.backup_storage_dir_path()).unwrap();
         let host = hostname::get().unwrap().into_string().unwrap();
 
         for backup_cfg in &config.backups {
@@ -220,7 +217,7 @@ mod tests {
 
         let config = read_config(test.temp_dir());
         let host = hostname::get().unwrap().into_string().unwrap();
-        paths::setup_backup_storage_dir(&config).unwrap();
+        paths::setup_backup_storage_dir(&config.backup_storage_dir_path()).unwrap();
         let tomorrow = chrono::Local::now() + chrono::Duration::days(1);
         let expected_next = tomorrow
             .with_time(NaiveTime::from_hms_opt(2, 30, 0).unwrap()).unwrap();

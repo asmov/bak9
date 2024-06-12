@@ -53,9 +53,7 @@ pub fn backup_storage_subdirs(backup_storage_dir: &Path) -> Vec<PathBuf> {
     ]
 }
 
-pub fn setup_backup_storage_dir(config: &config::BackupConfig) -> Result<()> {
-    let backup_storage_dir = config.backup_storage_dir_path();
-
+pub fn setup_backup_storage_dir(backup_storage_dir: &Path) -> Result<()> {
     if !backup_storage_dir.exists() {
         fs::create_dir_all(&backup_storage_dir)
             .map_err(|e| Error::new_file_io(&backup_storage_dir, e))?;
@@ -79,7 +77,7 @@ pub fn verify_backup_dirs(config: &config::BackupConfig) -> Result<()> {
 
     for subdir in backup_storage_subdirs(&backup_storage_dir) {
         subdir.canonicalize()
-            .map_err(|e| Error::new_configured_path(&backup_storage_dir, config::KEY_BACKUP_STORAGE_DIR, e))?;
+            .map_err(|e| Error::new_configured_path(&subdir, config::KEY_BACKUP_STORAGE_DIR, e))?;
     }
 
     Ok(())
