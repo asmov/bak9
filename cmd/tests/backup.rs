@@ -13,7 +13,7 @@ mod tests {
     use function_name::named;
     use super::*;
 
-    pub const TEST_HOME_DIR: &'static str = "tests/fixtures/fs/home/testusr";
+    pub const TEST_HOME_DIR: &'static str = "tests/testing/fixtures/fs/home/testusr";
     pub const BAK9_TMP_DIR: &'static str = "BAK9_TMP_DIR";
     pub const BAK9_TESTS_DIR: &'static str = "BAK9_TESTS_DIR";
  

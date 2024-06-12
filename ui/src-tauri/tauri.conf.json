@@ -1,7 +1,7 @@
 {
   "productName": "bak9",
   "version": "0.1.0",
-  "identifier": "software.asmov.bak9.ui",
+  "identifier": "app.asmov.bak9",
   "build": {
     "beforeDevCommand": "trunk serve",
     "devUrl": "http://localhost:1420",

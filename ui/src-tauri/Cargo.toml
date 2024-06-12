@@ -1,5 +1,5 @@
 [package]
-name = "bak9-ui"
+name = "bak9ui"
 version = "0.1.0"
 description = "Keep your $HOME safe: A rotational backup system for workstation users"
 authors = ["Asmov LLC <development.pub@asmov.software>"]

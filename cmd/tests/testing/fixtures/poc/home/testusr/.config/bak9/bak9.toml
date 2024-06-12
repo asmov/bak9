@@ -33,7 +33,7 @@ month = 1
 
 [[backup]]
 name = "home-testusr"
-source_dir = "$BAK9_TESTS_DIR/fixtures/fs/home/testusr"
+source_dir = "$BAK9_TESTS_DIR/fixtures/poc/home/testusr"
 full_schedule = "monthly"
 incremental_schedule = "daily"
 max_full = 2
