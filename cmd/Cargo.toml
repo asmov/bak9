@@ -21,3 +21,4 @@ clap = { version = "4", features = ["derive"] }
 [dev-dependencies]
 function_name = "0"
 asmov-testing = { path = "../../common/testing" }
+lazy_static = "1.4.0"

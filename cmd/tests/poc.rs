@@ -4,9 +4,8 @@ mod test_common;
 mod tests {
     use std::os::unix::fs::MetadataExt;
     use chrono::NaiveTime;
-    use asmov_testing as testing;
+    use asmov_testing::{self as testing, prelude::*};
     use bak9::{config, paths, backup, schedule, cmd::{rsync, xz}};
-    use function_name::named;
     use std::{fs, path::{Path, PathBuf}};
     use chrono;
     use hostname;
