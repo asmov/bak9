@@ -1,4 +1,4 @@
-backup_storage_dir = "$BAK9_TMP_DIR/strg/backup"
+backup_storage_dir = "$BAK9_TEST_TMP_DIR/strg/backup"
 
 [[schedule]]
 name = "daily"
@@ -33,7 +33,7 @@ month = 1
 
 [[backup]]
 name = "home-testusr"
-source_dir = "$BAK9_TESTS_DIR/fixtures/poc/home/testusr"
+source_dir = "$BAK9_TEST_SOURCE_ROOT/home/testusr"
 full_schedule = "monthly"
 incremental_schedule = "daily"
 max_full = 2

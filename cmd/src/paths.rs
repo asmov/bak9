@@ -9,14 +9,14 @@ pub const BACKUP_FULL_DIRNAME: &'static str = "full";
 pub const BACKUP_INCREMENTAL_DIRNAME: &'static str = "incremental";
 pub const BACKUP_LOGS_DIRNAME: &'static str = "logs";
 
-pub const BAK9_HOME: &'static str = "BAK9_HOME";
+pub const ENV_BAK9_HOME: &'static str = "BAK9_HOME";
 
 pub fn expand_path(path_str: &str) -> PathBuf {
     shellexpand::env(path_str).unwrap().to_string().into()
 }
  
 pub fn home_dir() -> Result<PathBuf> {
-    let home: PathBuf = if let Ok(bak9_home) = std::env::var(BAK9_HOME) {
+    let home: PathBuf = if let Ok(bak9_home) = std::env::var(ENV_BAK9_HOME) {
         PathBuf::from(bak9_home)
     } else {
         option_env!("HOME")

@@ -1,4 +1,4 @@
-mod test_common;
+mod testlib;
 
 #[cfg(test)]
 mod tests {
@@ -10,22 +10,12 @@ mod tests {
     use chrono;
     use hostname;
     use cron;
-    use super::*;
+    use super::testlib::TestlibModuleBuilder;
 
     static TESTING: testing::StaticModule = testing::module(|| {
         testing::integration(module_path!())
-            .base_temp_dir(env!("CARGO_TARGET_TMPDIR"))
+            .testlib_module_defaults()
             .using_temp_dir()
-            .using_fixture_dir()
-            .setup(|module_test| {
-                std::env::set_var(paths::BAK9_HOME,
-                    PathBuf::from(module_test.fixture_dir())
-                        .join(test_common::FIXTURE_USER_HOME)
-                );
-
-                std::env::set_var(test_common::BAK9_TMP_DIR, PathBuf::from(env!("CARGO_TARGET_TMPDIR")));
-                std::env::set_var(test_common::BAK9_TESTS_DIR, PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests"));
-            })
             .build()
     });
 
