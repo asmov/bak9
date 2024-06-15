@@ -18,7 +18,16 @@ pub fn default_config_path() -> Result<PathBuf> {
         .join(paths::BAK9_CONFIG_FILENAME))
 }
 
-pub fn read_config(config_path: Option<&PathBuf>) -> Result<BackupConfig> {
+pub(crate) fn read_cli_config(cli: &cli::Cli) -> Result<BackupConfig> {
+    match cli.config_file.as_ref() {
+        Some(path) => read_config(Some(path.as_path())),
+        None => read_config(None)
+    }
+}
+        
+    
+
+pub fn read_config(config_path: Option<&Path>) -> Result<BackupConfig> {
     let config_path = if let Some(config_path) = config_path {
         if !config_path.exists() {
             return Err(Error::ConfigFileNotFound { path: config_path.to_str().unwrap().to_string() })

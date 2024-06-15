@@ -1,6 +1,15 @@
-use crate::{config, schedule, paths};
 use std::{fs, path::PathBuf};
 use chrono::{self, TimeZone};
+use lazy_static::lazy_static;
+use crate::{Error, Result, cmd::rsync, cli::Cli, config::{self, BackupConfig, BackupConfigBackup}, paths, schedule};
+        
+lazy_static! {
+    static ref HOSTNAME: String = hostname::get().unwrap().into_string().unwrap();
+}
+
+pub(crate) fn hostname() -> &'static str {
+    &HOSTNAME
+}
 
 pub fn backup_run_name(timestamp: &str, backup_name: &str, host: &str) -> String {
     format!("{timestamp}_{backup_name}_{host}")
@@ -34,6 +43,24 @@ pub fn find_last_full_backup(backup_name: &str, host: &str, config: &config::Bac
     
     entries.first()
         .and_then(|entry| Some(entry.path().to_path_buf()))
+}
+
+/// Run a backup. Returns the path to
+pub(crate) fn backup_full(cfg_backup: &BackupConfigBackup, config: &BackupConfig, cli: &Cli) -> Result<PathBuf> {
+        let run_name = backup_run_name(&schedule::datetimestamp_today(), &cfg_backup.name, hostname());
+        let source_dir = cfg_backup.source_dir_path();
+        let dest_dir = config.backup_storage_dir_path()
+            .join(paths::BACKUP_FULL_DIRNAME)
+            .join(&run_name);
+
+        let mut rsync_cmd = rsync::cmd_rsync_full(&source_dir, &dest_dir);
+        let output = rsync_cmd.output().unwrap();
+
+        if !output.status.success() {
+            return Err(Error::Generic("TODO: RSYNC FAILED".to_string()));
+        }
+
+        Ok(dest_dir)
 }
 
 
