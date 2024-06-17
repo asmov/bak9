@@ -1,10 +1,19 @@
 use std::{fs, path::{PathBuf, Path}};
 use validator::{Validate, ValidationError};
-use crate::{Error, Result, cli, paths};
+use crate::{Error, Result, cli::*, paths};
 
 pub const KEY_BACKUP_STORAGE_DIR: &'static str = "backup_storage_dir";
 
-pub fn select_config_path(cli: &cli::Cli) -> Result<PathBuf> {
+macro_rules! select_config {
+    ($cli:ident, $config:ident) => {
+        match $config {
+            Some(config) => config,
+            None => &read_cli_config($cli)?
+        }
+    };
+}
+
+pub fn select_config_path(cli: &Cli) -> Result<PathBuf> {
     if let Some(config_path) = &cli.config_file {
         Ok(config_path.clone())
     } else {
@@ -18,7 +27,7 @@ pub fn default_config_path() -> Result<PathBuf> {
         .join(paths::BAK9_CONFIG_FILENAME))
 }
 
-pub(crate) fn read_cli_config(cli: &cli::Cli) -> Result<BackupConfig> {
+pub(crate) fn read_cli_config(cli: &Cli) -> Result<BackupConfig> {
     match cli.config_file.as_ref() {
         Some(path) => read_config(Some(path.as_path())),
         None => read_config(None)

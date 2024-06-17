@@ -23,3 +23,4 @@ lazy_static = "1"
 function_name = "0"
 asmov-testing = { path = "../../common/testing" }
 lazy_static = "1.4.0"
+dir-diff = "0.3.3"

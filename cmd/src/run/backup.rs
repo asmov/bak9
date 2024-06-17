@@ -1,9 +1,8 @@
 use std::{path::PathBuf, process};
-use crate::{backup::backup_full, Error, schedule, cmd::rsync,
-    cli::{Cli, BackupCommand}, config::{read_cli_config, BackupConfig, BackupConfigBackup}, paths, Result};
+use crate::{backup::*, Error, schedule, cmd::rsync, cli::*, config::*, paths, Result};
 
-pub(crate) fn run_backup(cli: &Cli, subcmd: &BackupCommand) -> Result<process::ExitCode> {
-    let config = read_cli_config(cli)?;
+pub fn run_backup(cli: &Cli, subcmd: &BackupCommand, config: Option<&BackupConfig>) -> BackupJobResults {
+    let config = select_config!(cli, config);
     verify_environment(&config)?;
 
     match subcmd {
@@ -11,43 +10,26 @@ pub(crate) fn run_backup(cli: &Cli, subcmd: &BackupCommand) -> Result<process::E
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum BackupJob {
-    Full,
-    Incremental,
-    Archive,
-    SyncFull,
-    SyncIncremental,
-    SyncArchive,
-}
-
-fn run_backup_scheduled(cli: &Cli, config: &BackupConfig) -> Result<process::ExitCode> {
+fn run_backup_scheduled(cli: &Cli, config: &BackupConfig) -> BackupJobResults {
     let mut jobs = Vec::new();
     for cfg_backup in &config.backups {
-        if let Some(job) = backup_job_due(&cfg_backup, &config, &cli)? {
+        if let Some(job) = backup_job_due(&cfg_backup, &config)? {
             jobs.push((cfg_backup, job));
         }
     }
 
+    let mut results = Vec::new();
     for (cfg_backup, job) in jobs {
         match job {
             BackupJob::Full => {
-                backup_full(&cfg_backup, &config, &cli)?;
+                let output = backup_full(&cfg_backup, &config)?;
+                results.push(output);
             },
             _ => todo!(),
         }
     }
 
-    Ok(process::ExitCode::SUCCESS)
-}
-
-/// Check to see if it's time to run a backup.
-fn backup_job_due(
-    cfg_backup: &BackupConfigBackup,
-    config: &BackupConfig,
-    cli: &Cli
-) -> Result<Option<BackupJob>> {
-    todo!()
+    Ok(results)
 }
 
 /// Verify that the runtime environment that has been configured is valid.  

@@ -214,7 +214,7 @@ mod tests {
         for backup_cfg in &config.backups {
             do_backup_full(&backup_cfg.name, &config, &host);
 
-            let last_full_backup = backup::find_last_full_backup(&backup_cfg.name, &host, &config).unwrap();
+            let last_full_backup = backup::find_last_full_backup(&backup_cfg.name, &host, &config.backup_storage_dir_path()).unwrap();
             let last_filename = last_full_backup.file_name().unwrap().to_str().unwrap();
             let (last_backup_time, _, _) = backup::parse_backup_name(&last_filename, &config);
 

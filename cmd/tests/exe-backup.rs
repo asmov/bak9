@@ -20,7 +20,7 @@ mod tests {
         let mock_root = test.imported_fixture_dir(&testlib::NAMEPATH).join(testlib::MOCK_FS_DIRNAME); 
         let output = process::Command::new(BIN_EXE)
             .args(args)
-            .env(paths::ENV_BAK9_HOME, mock_root.join(testlib::FIXTURE_USER_HOME_PATHSTR))
+            .env(paths::ENV_BAK9_HOME, mock_root.join(testlib::HOME_TESTUSR))
             .env(testlib::ENV_BAK9_TEST_MOCK_ROOT_DIR, &mock_root)
             .env(testlib::ENV_BAK9_TEST_TMP_DIR, test.temp_dir())
             .output()

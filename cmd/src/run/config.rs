@@ -2,7 +2,7 @@ use std::{io::Write, process, path::Path};
 use colored::Colorize;
 use crate::{config, cli, Error, Result};
 
-pub(crate) fn run_config(cli: &cli::Cli, subcmd: &cli::ConfigCommand) -> Result<process::ExitCode> {
+pub(crate) fn run_config(cli: &cli::Cli, subcmd: &cli::ConfigCommand) -> Result<bool> {
     let config_path = config::select_config_path(&cli)?;
     match subcmd {
         cli::ConfigCommand::Setup => run_config_setup(&config_path, cli.force),
@@ -12,7 +12,7 @@ pub(crate) fn run_config(cli: &cli::Cli, subcmd: &cli::ConfigCommand) -> Result<
     }
 }
 
-fn run_config_setup(config_path: &Path, force: bool) -> Result<process::ExitCode> {
+fn run_config_setup(config_path: &Path, force: bool) -> Result<bool> {
     if config_path.exists() {
         println!("Verifying config file: {}", config_path.to_str().unwrap().cyan());
         return run_config_verify(config_path);
@@ -30,7 +30,7 @@ fn run_config_setup(config_path: &Path, force: bool) -> Result<process::ExitCode
             .expect("Failed to read input");
 
         if input.trim().to_lowercase() != "y" {
-            return Ok(std::process::ExitCode::FAILURE);
+            return Ok(false);
         }
     }   
 
@@ -56,11 +56,11 @@ fn run_config_setup(config_path: &Path, force: bool) -> Result<process::ExitCode
     if input.trim().to_lowercase() != "y" {
         run_config_edit(config_path)
     } else {
-        Ok(std::process::ExitCode::SUCCESS)
+        Ok(true)
     }
 }
 
-fn run_config_edit(config_path: &Path) -> Result<process::ExitCode> {
+fn run_config_edit(config_path: &Path) -> Result<bool> {
     println!("Launching editor for config file: {}", config_path.to_str().unwrap().cyan());
 
     let output = bak9_os::run_best_editor(config_path, false)
@@ -89,19 +89,19 @@ fn handle_config_file_not_found(config_path: &Path) -> bool {
     }
 }
 
-fn run_config_verify(config_path: &Path) -> Result<process::ExitCode> {
+fn run_config_verify(config_path: &Path) -> Result<bool> {
     if handle_config_file_not_found(config_path) {
-        return Ok(std::process::ExitCode::FAILURE);
+        return Ok(false);
     }
 
     println!("{} Config is valid", "good:".green());
     println!("{} Backup environment is valid", "good:".green());
-    Ok(std::process::ExitCode::SUCCESS)
+    Ok(true)
 }
 
-fn run_config_show(config_path: &Path) -> Result<process::ExitCode> {
+fn run_config_show(config_path: &Path) -> Result<bool> {
     if handle_config_file_not_found(config_path) {
-        return Ok(std::process::ExitCode::FAILURE);
+        return Ok(false);
     }
 
     let header = format!("bak9 config: {}", config_path.to_string_lossy()); 
@@ -110,7 +110,7 @@ fn run_config_show(config_path: &Path) -> Result<process::ExitCode> {
     print!("{}", std::fs::read_to_string(config_path)
         .map_err(|e| Error::Generic(format!("Unable to read from config file: {} :: {e}", config_path.to_string_lossy().cyan())))?);
 
-    Ok(std::process::ExitCode::SUCCESS)
+    Ok(true)
 }
 
  

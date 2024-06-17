@@ -5,25 +5,36 @@ pub mod summary;
 
 use std::process;
 use clap::Parser;
-use crate::{error::{self, Result}, cli, run};
+use crate::{error::*, cli::*, config::*, run};
 
-pub fn run_default() -> process::ExitCode {
-    let cli = cli::Cli::parse();
+pub fn run_main() -> process::ExitCode {
+    let cli = Cli::parse();
     match run_with(cli) {
-        Ok(exit_code) => exit_code,
+        Ok(true) => process::ExitCode::SUCCESS,
+        Ok(false) => process::ExitCode::FAILURE,
         Err(e) => {
-            eprintln!("{} {e}", error::bak9_error_log_prefix());
-            std::process::ExitCode::FAILURE
+            eprintln!("{} {e}", bak9_error_log_prefix());
+            process::ExitCode::FAILURE
         }
     }
 }
 
-pub fn run_with(cli: cli::Cli) -> Result<process::ExitCode> {
+pub fn run_with(cli: Cli) -> Result<bool> {
     match &cli.subcommand {
-        cli::Command::Backup(subcmd) => run::backup::run_backup(&cli, subcmd),
-        cli::Command::Config(subcmd) => run::config::run_config(&cli, subcmd),
-        cli::Command::Log(subcmd) => run::log::run_log(&cli, subcmd),
-        cli::Command::Summary => run::summary::run_summary(&cli),
+        Command::Backup(subcmd) => run::backup::run_backup(&cli, subcmd, None).map(|_| Ok(true))?,
+        Command::Config(subcmd) => run::config::run_config(&cli, subcmd),
+        Command::Log(subcmd) => run::log::run_log(&cli, subcmd),
+        Command::Summary => run::summary::run_summary(&cli),
     }
 }
+
+pub fn run_with_config(cli: Cli, config: BackupConfig) -> Result<bool> {
+    match &cli.subcommand {
+        Command::Backup(subcmd) => run::backup::run_backup(&cli, subcmd, Some(&config)).map(|_| Ok(true))?,
+        Command::Config(subcmd) => run::config::run_config(&cli, subcmd),
+        Command::Log(subcmd) => run::log::run_log(&cli, subcmd),
+        Command::Summary => run::summary::run_summary(&cli),
+    }
+}
+
 

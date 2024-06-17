@@ -4,7 +4,8 @@ use lazy_static::lazy_static;
 use asmov_testing::{self as testing, prelude::*};
 
 pub(crate) const TESTLIB: &'static str = "testlib";
-pub(crate) const FIXTURE_USER_HOME_PATHSTR: &'static str = "home/testusr";
+pub(crate) const TESTUSR: &'static str = "testusr";
+pub(crate) const HOME_TESTUSR: &'static str = "home/testusr";
 pub(crate) const MOCK_FS_DIRNAME: &'static str = "mock-fs";
 /// The test-run's temporary directory
 pub(crate) const ENV_BAK9_TEST_TMP_DIR: &'static str = "BAK9_TEST_TMP_DIR";
