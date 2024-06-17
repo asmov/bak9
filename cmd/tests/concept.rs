@@ -98,7 +98,7 @@ mod tests {
 
     fn do_backup_full(name: &str, config: &config::BackupConfig, host: &str) -> PathBuf {
         let backup_cfg = config.backup(name).unwrap();
-        let run_name = backup::backup_run_name(&schedule::datetimestamp_today(), &backup_cfg.name, &host);
+        let run_name = backup::backup_run_name(schedule::datetime_now(), &backup_cfg.name, &host);
         let source_dir = backup_cfg.source_dir_path();
         let dest_dir = config.backup_storage_dir_path()
             .join(paths::BACKUP_FULL_DIRNAME)
@@ -125,7 +125,7 @@ mod tests {
     fn do_backup_incremental(name: &str, config: &config::BackupConfig, host: &str, prev_full_dir: &Path) -> PathBuf {
         let backup_cfg = config.backup(name).unwrap();
         let source_dir = backup_cfg.source_dir_path();
-        let run_name = backup::backup_run_name(&schedule::datetimestamp_today(), &backup_cfg.name, &host);
+        let run_name = backup::backup_run_name(schedule::datetime_now(), &backup_cfg.name, &host);
         let dest_dir = config.backup_storage_dir_path()
             .join(paths::BACKUP_INCREMENTAL_DIRNAME)
             .join(&run_name);
@@ -151,7 +151,7 @@ mod tests {
     fn do_zip(backup_name: &str, config: &config::BackupConfig, host: &str, full_dir: &Path) -> PathBuf {
         let backup_cfg = config.backup(backup_name).unwrap();
         let _source_dir = backup_cfg.source_dir_path();
-        let run_name = backup::backup_run_name(&schedule::datetimestamp_today(), &backup_cfg.name, &host);
+        let run_name = backup::backup_run_name(schedule::datetime_now(), &backup_cfg.name, &host);
          let zip_file = config.backup_storage_dir_path()
             .join(paths::BACKUP_ARCHIVE_DIRNAME)
             .join(&run_name)
@@ -216,7 +216,7 @@ mod tests {
 
             let last_full_backup = backup::find_last_full_backup(&backup_cfg.name, &host, &config.backup_storage_dir_path()).unwrap();
             let last_filename = last_full_backup.file_name().unwrap().to_str().unwrap();
-            let (last_backup_time, _, _) = backup::parse_backup_name(&last_filename, &config);
+            let (last_backup_time, _, _) = backup::parse_backup_run_name(&last_filename);
 
             let schedule_cfg = config.schedule(&backup_cfg.incremental_schedule).unwrap();
             let schedule = cron::Schedule::from(schedule_cfg);

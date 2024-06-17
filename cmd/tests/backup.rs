@@ -2,7 +2,7 @@ mod testlib;
 
 #[cfg(test)]
 mod tests {
-    use std::{process, vec};
+    use std::{fs, process, vec};
     use asmov_testing::{self as testing, prelude::*};
     use bak9::{config::BackupConfigSchedule, paths};
     use super::testlib::{self, TestlibModuleBuilder};
@@ -15,7 +15,7 @@ mod tests {
     });
 
     fn setup_backup_dir(test: &mut testing::Test) {
-        paths::setup_backup_storage_dir(&test.temp_dir().join("strg").join("backup")).unwrap();
+        paths::setup_backup_storage_dir(&test.temp_dir().join("strg/backup")).unwrap();
     }
 
     fn make_cli(_test: &testing::Test) -> bak9::cli::Cli {
@@ -85,6 +85,58 @@ mod tests {
         let test = TESTING.test(function_name!())
             .using_temp_dir()
             .setup(setup_backup_dir)
+            .build();
+
+        let cli = make_cli(&test);
+        let config = make_config(&test);
+
+        let results = bak9_backup(&cli, &config).unwrap();
+        assert_eq!(1, results.len());
+        let result = results.get(0).unwrap();
+        assert!(matches!(result, bak9::backup::BackupJobOutput::Full(..)));
+        let result = match result {
+            bak9::backup::BackupJobOutput::Full(result) => result,
+            _ => panic!("unexpected result"),
+        };
+        assert_eq!(false, dir_diff::is_different(&result.source_dir, &result.dest_dir.join(testlib::TESTUSR)).unwrap());
+
+        // try running it again. it should not create a new backup for "today"
+        let results = bak9_backup(&cli, &config).unwrap();
+        assert_eq!(0, results.len());
+    }
+
+    fn setup_incremental_backup_test(test: &mut testing::Test) {
+        setup_backup_dir(test);
+
+        let cli = make_cli(test);
+        let config = make_config(test);
+        let results = bak9_backup(&cli, &config).unwrap();
+        assert_eq!(1, results.len());
+        let result = results.get(0).unwrap();
+        let result = match result {
+            bak9::backup::BackupJobOutput::Full(result) => result,
+            _ => panic!("unexpected result"),
+        };
+
+        let yesterday_run_name = bak9::backup::backup_run_name(
+            chrono::Local::now().checked_sub_signed(chrono::Duration::days(1)).unwrap(),
+            &config.backups[0].name,
+            bak9::backup::hostname(),
+        );
+
+        let yesterday_backup_run_dir = test.temp_dir().join("strg/backup")
+            .join(paths::BACKUP_FULL_DIRNAME)
+            .join(yesterday_run_name);
+
+        fs::rename(&result.dest_dir, yesterday_backup_run_dir).unwrap();
+    }
+
+    #[named]
+    #[test]
+    fn test_scheduled_incremental() {
+        let test = TESTING.test(function_name!())
+            .using_temp_dir()
+            .setup(setup_incremental_backup_test)
             .build();
 
         let cli = make_cli(&test);
