@@ -1,0 +1,5 @@
+this file is new to source-2
+
+delta.txt content is updated
+
+alpha/alpha.txt permissions were changed (600 -> 660)

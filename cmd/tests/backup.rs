@@ -3,6 +3,7 @@ mod testlib;
 #[cfg(test)]
 mod tests {
     use std::{fs, process, vec};
+    use std::os::unix::fs::PermissionsExt;
     use asmov_testing::{self as testing, prelude::*};
     use bak9::{config::BackupConfigSchedule, paths};
     use super::testlib::{self, TestlibModuleBuilder};
@@ -26,7 +27,7 @@ mod tests {
         }
     }
 
-    fn make_config(test: &testing::Test) -> bak9::config::BackupConfig {
+    fn make_config(test: &testing::Test, source_version: u8) -> bak9::config::BackupConfig {
         bak9::config::BackupConfig {
             backup_storage_dir: test.temp_dir().join("strg/backup")
                 .to_str().unwrap().to_string(),
@@ -64,6 +65,7 @@ mod tests {
                     name: "home".to_string(),
                     source_dir: test.imported_fixture_dir(&testlib::NAMEPATH)
                         .join(testlib::MOCK_FS_DIRNAME)
+                        .join(format!("{}{source_version}", testlib::SOURCE_PREFIX))
                         .join(testlib::HOME_TESTUSR)
                         .to_str().unwrap().to_string(),
                     full_schedule: "monthly".to_string(),
@@ -88,7 +90,7 @@ mod tests {
             .build();
 
         let cli = make_cli(&test);
-        let config = make_config(&test);
+        let config = make_config(&test, 1);
 
         let results = bak9_backup(&cli, &config).unwrap();
         assert_eq!(1, results.len());
@@ -109,7 +111,7 @@ mod tests {
         setup_backup_dir(test);
 
         let cli = make_cli(test);
-        let config = make_config(test);
+        let config = make_config(test, 1);
         let results = bak9_backup(&cli, &config).unwrap();
         assert_eq!(1, results.len());
         let result = results.get(0).unwrap();
@@ -140,17 +142,26 @@ mod tests {
             .build();
 
         let cli = make_cli(&test);
-        let config = make_config(&test);
+        let config = make_config(&test, 2);
 
         let results = bak9_backup(&cli, &config).unwrap();
         assert_eq!(1, results.len());
         let result = results.get(0).unwrap();
-        assert!(matches!(result, bak9::backup::BackupJobOutput::Full(..)));
+        assert!(matches!(result, bak9::backup::BackupJobOutput::Incremental(..)));
         let result = match result {
-            bak9::backup::BackupJobOutput::Full(result) => result,
+            bak9::backup::BackupJobOutput::Incremental(result) => result,
             _ => panic!("unexpected result"),
         };
-        assert_eq!(false, dir_diff::is_different(&result.source_dir, &result.dest_dir.join(testlib::TESTUSR)).unwrap());
+
+        let dest_home_dir = result.dest_dir.join(testlib::TESTUSR);
+        assert!(!dir_diff::is_different(&result.source_dir, &dest_home_dir).unwrap());
+        assert!(dir_diff::is_different(&result.dest_dir, &dest_home_dir).unwrap());
+        assert!(dest_home_dir.join("source-2.txt").exists(),
+            "New file: source-2.txt");
+        assert_eq!("source-2 delta", fs::read_to_string(dest_home_dir.join("delta.txt")).unwrap(),
+            "Modified file: delta.txt");
+        assert_eq!(0o660, fs::metadata(dest_home_dir.join("alpha").join("alpha.txt")).unwrap().permissions().mode() & 0o777,
+            "Modified permissions: alpha/alpha.txt");
 
         // try running it again. it should not create a new backup for "today"
         let results = bak9_backup(&cli, &config).unwrap();

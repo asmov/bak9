@@ -25,6 +25,10 @@ fn run_backup_scheduled(cli: &Cli, config: &BackupConfig) -> BackupJobResults {
                 let output = backup_full(&cfg_backup, &config)?;
                 results.push(output);
             },
+            BackupJob::Incremental => {
+                let output = backup_incremental(&cfg_backup, &config)?;
+                results.push(output);
+            },
             _ => todo!(),
         }
     }

@@ -26,10 +26,26 @@ pub fn parse_backup_run_name<'filename>(
     (datetime, backup_name, host)
 }
 
-pub fn find_last_full_backup(backup_name: &str, host: &str, backup_storage_dir: &Path) -> Option<PathBuf> {
-    let backup_full_dir = backup_storage_dir.join(paths::BACKUP_FULL_DIRNAME);
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum BackupType {
+    Full,
+    Incremental,
+}
+
+impl BackupType {
+    fn subdir_name(&self) -> &'static str {
+        match self {
+            BackupType::Full => paths::BACKUP_FULL_DIRNAME,
+            BackupType::Incremental => paths::BACKUP_INCREMENTAL_DIRNAME,
+        }
+    }
+}
+
+pub fn find_last_backup(backup_type: BackupType, backup_name: &str, host: &str, backup_storage_dir: &Path) -> Option<PathBuf> {
+    let backup_dir = backup_storage_dir.join(backup_type.subdir_name());
+
     let filename_ending = format!("_{backup_name}_{host}");
-    let mut entries = fs::read_dir(&backup_full_dir).unwrap()
+    let mut entries = fs::read_dir(&backup_dir).unwrap()
         .map(|entry| entry.unwrap())
         .filter(|entry| {
             entry.metadata().unwrap().is_dir()
@@ -47,6 +63,7 @@ pub type BackupJobResults = Result<Vec<BackupJobOutput>>;
 
 pub enum BackupJobOutput {
     Full (BackupJobOutputFull),
+    Incremental (BackupJobOutputIncremental),
 }
 
 pub struct BackupJobOutputFull {
@@ -55,37 +72,74 @@ pub struct BackupJobOutputFull {
     pub dest_dir: PathBuf,
 }
 
-
-/// Run a backup. Returns the path to
-pub(crate) fn backup_full(cfg_backup: &BackupConfigBackup, config: &BackupConfig) -> Result<BackupJobOutput> {
-        let run_name = backup_run_name(datetime_now(), &cfg_backup.name, hostname());
-        let source_dir = cfg_backup.source_dir_path();
-        let dest_dir = config.backup_storage_dir_path()
-            .join(paths::BACKUP_FULL_DIRNAME)
-            .join(&run_name);
-
-        let mut rsync_cmd = rsync::cmd_rsync_full(&source_dir, &dest_dir);
-        let output = rsync_cmd.output().unwrap();
-
-        if !output.status.success() {
-            return Err(Error::Generic("TODO: RSYNC FAILED".to_string()));
-        }
-
-        Ok(BackupJobOutput::Full(BackupJobOutputFull {
-            name: cfg_backup.name.clone(),
-            source_dir,
-            dest_dir,
-        }))
+pub struct BackupJobOutputIncremental {
+    pub name: String,
+    pub source_dir: PathBuf,
+    pub full_dir: PathBuf,
+    pub dest_dir: PathBuf,
 }
 
+/// Performs a full backup. Returns the path to the backup directory created.
+pub(crate) fn backup_full(cfg_backup: &BackupConfigBackup, config: &BackupConfig) -> Result<BackupJobOutput> {
+    let run_name = backup_run_name(datetime_now(), &cfg_backup.name, hostname());
+    let source_dir = cfg_backup.source_dir_path();
+    let dest_dir = config.backup_storage_dir_path()
+        .join(paths::BACKUP_FULL_DIRNAME)
+        .join(&run_name);
+
+    let mut rsync_cmd = rsync::cmd_rsync_full(&source_dir, &dest_dir);
+    let output = rsync_cmd.output().unwrap();
+
+    if !output.status.success() {
+        return Err(Error::Generic("TODO: RSYNC FAILED".to_string()));
+    }
+
+    Ok(BackupJobOutput::Full(BackupJobOutputFull {
+        name: cfg_backup.name.clone(),
+        source_dir,
+        dest_dir,
+    }))
+}
+
+/// Performs an incremental backup. Returns the path to the backup directory created.
+pub(crate) fn backup_incremental(cfg_backup: &BackupConfigBackup, config: &BackupConfig) -> Result<BackupJobOutput> {
+    let source_dir = cfg_backup.source_dir_path();
+    let run_name = backup_run_name(datetime_now(), &cfg_backup.name, hostname());
+    let dest_dir = config.backup_storage_dir_path()
+        .join(paths::BACKUP_INCREMENTAL_DIRNAME)
+        .join(&run_name);
+
+    let last_full_dir = find_last_backup(
+            BackupType::Full,
+            &cfg_backup.name,
+            hostname(),
+            &config.backup_storage_dir_path()
+        ).ok_or_else(|| Error::Generic("No full backup found".to_string()))?;
+
+
+    let mut rsync_cmd = rsync::cmd_rsync_incremental(&last_full_dir, &source_dir, &dest_dir);
+    let output = rsync_cmd.output().unwrap();
+
+    if !output.status.success() {
+        return Err(Error::Generic("TODO: RSYNC FAILED".to_string()));
+    }
+
+    Ok(BackupJobOutput::Incremental(BackupJobOutputIncremental {
+        name: cfg_backup.name.clone(),
+        source_dir,
+        full_dir: last_full_dir,
+        dest_dir,
+    }))
+}
+ 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum BackupJob {
     Full,
     Incremental,
-    Archive,
-    SyncFull,
-    SyncIncremental,
-    SyncArchive,
+    //Archive,
+    //SyncFull,
+    //SyncIncremental,
+    //SyncArchive,
 }
 
 
@@ -94,8 +148,8 @@ pub(crate) fn backup_job_due(
     cfg_backup: &BackupConfigBackup,
     config: &BackupConfig,
 ) -> Result<Option<BackupJob>> {
-//TODO: Determine *which* schedule entry to use for this backu; both full and incremental
-    let last_full_backup = find_last_full_backup(
+    let last_full_backup = find_last_backup(
+        BackupType::Full,
         &cfg_backup.name,
         hostname(),
         &config.backup_storage_dir_path());
@@ -105,18 +159,43 @@ pub(crate) fn backup_job_due(
         None => return Ok(Some(BackupJob::Full)),
     };
 
-    let last_filename = last_full_backup.file_name().unwrap().to_str().unwrap();
-    let (last_backup_time, _, _) = parse_backup_run_name(&last_filename);
-    let schedule_cfg = config.schedule(&cfg_backup.incremental_schedule).unwrap();
-    let schedule = cron::Schedule::from(schedule_cfg);
-    let next = schedule.after(&last_backup_time).next().unwrap();
+    let last_full_dirname = last_full_backup.file_name().unwrap().to_str().unwrap();
+    let (last_full_datetime, _, _) = parse_backup_run_name(&last_full_dirname);
+    let next_full_datetime = cron::Schedule::from(config.schedule(&cfg_backup.full_schedule).unwrap())
+        .after(&last_full_datetime)
+        .next()
+        .unwrap();
 
-    if next <= chrono::Local::now() {
-        Ok(Some(BackupJob::Full))
+    if next_full_datetime <= chrono::Local::now() {
+        return Ok(Some(BackupJob::Full))
+    }
+
+    let last_incremental = find_last_backup(
+        BackupType::Incremental,
+        &cfg_backup.name,
+        hostname(),
+        &config.backup_storage_dir_path());
+    
+    let after_datetime = if let Some(last_incremental_dir) = last_incremental {
+        let last_incremental_dirname = last_incremental_dir.file_name().unwrap().to_str().unwrap();
+        let (last_incremental_datetime, _, _) = parse_backup_run_name(&last_incremental_dirname);
+        last_incremental_datetime
+    } else {
+        last_full_datetime
+    };
+
+    let next_incremental_datetime = cron::Schedule::from(config.schedule(&cfg_backup.incremental_schedule).unwrap())
+        .after(&after_datetime)
+        .next()
+        .unwrap();
+
+    if next_incremental_datetime <= chrono::Local::now() {
+        Ok(Some(BackupJob::Incremental))
     } else {
         Ok(None)
     }
 }
+
 
 
 

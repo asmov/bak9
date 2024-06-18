@@ -1,0 +1,47 @@
+backup_storage_dir = "$BAK9_TEST_TMP_DIR/strg/backup"
+
+[[schedule]]
+name = "daily"
+minute = 30
+hour = 2
+
+[[schedule]]
+name = "weekly"
+minute = 30
+hour = 2
+day_of_week = "mon"
+
+[[schedule]]
+name = "monthly"
+minute = 30
+hour = 2
+day_of_month = 1
+
+[[schedule]]
+name = "quarterly"
+minute = 30
+hour = 2
+day_of_month = 1
+months = [1, 4, 7, 10]
+
+[[schedule]]
+name = "annual"
+minute = 30
+hour = 2
+day_of_month = 1
+month = 1
+
+[[backup]]
+name = "home-testusr"
+source_dir = "$BAK9_TEST_SOURCE_ROOT/home/testusr"
+full_schedule = "monthly"
+incremental_schedule = "daily"
+max_full = 2
+
+[[backup.archive]]
+schedule = "quarterly"
+max_archives = 4
+
+[[backup.archive]]
+schedule = "annual"
+max_archives = 3

@@ -5,6 +5,7 @@ use asmov_testing::{self as testing, prelude::*};
 
 pub(crate) const TESTLIB: &'static str = "testlib";
 pub(crate) const TESTUSR: &'static str = "testusr";
+pub(crate) const SOURCE_PREFIX: &'static str = "source-";
 pub(crate) const HOME_TESTUSR: &'static str = "home/testusr";
 pub(crate) const MOCK_FS_DIRNAME: &'static str = "mock-fs";
 /// The test-run's temporary directory
