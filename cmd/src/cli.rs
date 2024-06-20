@@ -11,6 +11,9 @@ pub struct Cli {
     #[arg(short, help = "Force the operation without confirmation")]
     pub force: bool,
 
+    #[arg(short, help = "Quit. Suppresses standard output")]
+    pub quiet: bool,
+
     #[command(subcommand)]
     pub subcommand: Command,
 }
@@ -30,7 +33,17 @@ pub enum Command {
 #[derive(Subcommand, Debug)]
 pub enum BackupCommand {
     #[command(name = "scheduled", alias = "cron", about = "Performs backups as scheduled")]
-    Scheduled
+    Scheduled,
+    #[command(name = "full", about = "Manually performs a full backup")]
+    Full(ManualBackupCommand),
+    #[command(name = "incremental", alias = "update", about = "Manually performs an incremental backup")]
+    Incremental(ManualBackupCommand),
+}
+
+#[derive(Parser, Debug)]
+pub struct ManualBackupCommand {
+    #[arg(help = "Name of the backup to run")]
+    pub name: String
 }
 
 #[derive(Subcommand, Debug)]

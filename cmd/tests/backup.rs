@@ -2,7 +2,7 @@ mod testlib;
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, process, vec};
+    use std::{fs, vec};
     use std::os::unix::fs::PermissionsExt;
     use asmov_testing::{self as testing, prelude::*};
     use bak9::{config::BackupConfigSchedule, paths};
@@ -23,6 +23,7 @@ mod tests {
         bak9::cli::Cli {
             config_file: None,
             force: false,
+            quiet: false,
             subcommand: bak9::cli::Command::Backup(bak9::cli::BackupCommand::Scheduled),
         }
     }

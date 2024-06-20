@@ -1,4 +1,4 @@
-use std::{io::Write, process, path::Path};
+use std::{io::Write, path::Path};
 use colored::Colorize;
 use crate::{config, cli, Error, Result};
 

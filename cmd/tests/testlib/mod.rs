@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::path::PathBuf;
+
 use lazy_static::lazy_static;
 use asmov_testing::{self as testing, prelude::*};
 
@@ -11,7 +13,15 @@ pub(crate) const MOCK_FS_DIRNAME: &'static str = "mock-fs";
 /// The test-run's temporary directory
 pub(crate) const ENV_BAK9_TEST_TMP_DIR: &'static str = "BAK9_TEST_TMP_DIR";
 /// Where a mock filesystem is located
-pub(crate) const ENV_BAK9_TEST_MOCK_ROOT_DIR: &'static str = "BAK9_TEST_MOCK_ROOT_DIR";
+pub(crate) const ENV_BAK9_TEST_SOURCE_ROOT: &'static str = "BAK9_TEST_SOURCE_ROOT";
+
+pub(crate) fn source_dir(source_num: u8, test: &testing::Test) -> PathBuf {
+    test.imported_fixture_dir(&NAMEPATH)
+        .join(MOCK_FS_DIRNAME)
+        .join(format!("{}{source_num}", SOURCE_PREFIX))
+        .join(HOME_TESTUSR)
+        .canonicalize().unwrap()
+}
 
 lazy_static!{
     pub(crate) static ref NAMEPATH: testing::Namepath =

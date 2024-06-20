@@ -1,7 +1,7 @@
 use std::{fs, path::{PathBuf, Path}};
-use chrono::{self, TimeZone};
+use chrono;
 use lazy_static::lazy_static;
-use crate::{Error, Result, cmd::rsync, cli::Cli, config::{self, BackupConfig, BackupConfigBackup}, paths, schedule::*};
+use crate::{error::*, cmd::rsync, config::*, paths, schedule::*};
         
 lazy_static! {
     static ref HOSTNAME: String = hostname::get().unwrap().into_string().unwrap();
@@ -63,20 +63,77 @@ pub type BackupJobResults = Result<Vec<BackupJobOutput>>;
 
 pub enum BackupJobOutput {
     Full (BackupJobOutputFull),
-    Incremental (BackupJobOutputIncremental),
+    Incremental (BackupJobOutputIncremental)
+}
+
+impl BackupJobOutputImpl for BackupJobOutput {
+    fn name(&self) -> &str {
+        match self {
+            BackupJobOutput::Full(output) => output.name(),
+            BackupJobOutput::Incremental(output) => output.name(),
+        }
+    }
+
+    fn source_dir(&self) -> &Path {
+        match self {
+            BackupJobOutput::Full(output) => output.source_dir(),
+            BackupJobOutput::Incremental(output) => output.source_dir(),
+        }
+    }
+
+    fn dest_dir(&self) -> &Path {
+        match self {
+            BackupJobOutput::Full(output) => output.dest_dir(),
+            BackupJobOutput::Incremental(output) => output.dest_dir(),
+        }
+    }
+}
+
+pub trait BackupJobOutputImpl {
+    fn name(&self) -> &str;
+    fn source_dir(&self) -> &Path;
+    fn dest_dir(&self) -> &Path;
 }
 
 pub struct BackupJobOutputFull {
     pub name: String,
     pub source_dir: PathBuf,
-    pub dest_dir: PathBuf,
+    pub dest_dir: PathBuf
+}
+
+impl BackupJobOutputImpl for BackupJobOutputFull {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn source_dir(&self) -> &Path {
+        &self.source_dir
+    }
+
+    fn dest_dir(&self) -> &Path {
+        &self.dest_dir
+    }
 }
 
 pub struct BackupJobOutputIncremental {
     pub name: String,
     pub source_dir: PathBuf,
     pub full_dir: PathBuf,
-    pub dest_dir: PathBuf,
+    pub dest_dir: PathBuf
+}
+
+impl BackupJobOutputImpl for BackupJobOutputIncremental {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn source_dir(&self) -> &Path {
+        &self.source_dir
+    }
+
+    fn dest_dir(&self) -> &Path {
+        &self.dest_dir
+    }
 }
 
 /// Performs a full backup. Returns the path to the backup directory created.
