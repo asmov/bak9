@@ -283,6 +283,21 @@ pub struct BackupConfigArchive {
 
 pub const CONFIG_DEFAULTS: &'static str = r#"backup_storage_dir = "/storage/backup"
 
+[[backup]]
+name = "home"
+source_dir = "$HOME"
+full_schedule = "monthly"
+incremental_schedule = "daily"
+max_full = 4
+
+[[backup.archive]]
+schedule = "quarterly"
+max_archives = 5
+
+[[backup.archive]]
+schedule = "annual"
+max_archives = 4
+
 [[schedule]]
 name = "daily"
 minute = 0
@@ -313,20 +328,5 @@ minute = 0
 hour = 0
 day_of_month = 1
 month = 1
-
-[[backup]]
-name = "home-$USER"
-source_dir = "$HOME"
-full_schedule = "monthly"
-incremental_schedule = "daily"
-max_full = 3
-
-[[backup.archive]]
-schedule = "quarterly"
-max_archives = 4
-
-[[backup.archive]]
-schedule = "annual"
-max_archives = 3
 "#;
 

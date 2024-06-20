@@ -1,25 +1,62 @@
-use std::{sync::OnceLock, fs, path::{PathBuf, Path}};
+use std::{fmt::Display, fs, path::{Path, PathBuf}, str::FromStr, sync::OnceLock};
 use chrono;
 use crate::{error::*, cmd::rsync, config::*, paths, schedule::*};
         
 pub fn hostname() -> &'static str {
     static HOSTNAME: OnceLock<String> = OnceLock::new();
-    &HOSTNAME.get_or_init(|| hostname::get().unwrap().into_string().unwrap())
+    &HOSTNAME.get_or_init(|| whoami::fallible::hostname().unwrap())
 }
 
-pub fn backup_run_name(datetime: chrono::DateTime<chrono::Local>, backup_name: &str, host: &str) -> String {
-    let datetimestamp = datetimestamp(datetime);
-    format!("{datetimestamp}_{backup_name}_{host}")
+pub fn username() -> &'static str {
+    static USERNAME: OnceLock<String> = OnceLock::new();
+    &USERNAME.get_or_init(|| whoami::username())
 }
 
-pub fn parse_backup_run_name<'filename>(
-    filename: &'filename str,
-) -> (chrono::DateTime<chrono::Local>, &'filename str, &'filename str) {
-    let parts = filename.split('_').collect::<Vec<&str>>();
-    let datetime = from_datetimestamp(parts[0]);
-    let backup_name = parts[1];
-    let host = parts[2];
-    (datetime, backup_name, host)
+pub struct BackupRunName {
+    pub datetime: chrono::DateTime<chrono::Local>,
+    pub hostname: String,
+    pub username: String,
+    pub backup_name: String,
+}
+
+impl BackupRunName {
+    pub fn new(datetime: chrono::DateTime<chrono::Local>, hostname: &str, username: &str, backup_name: &str) -> Self {
+        Self {
+            datetime,
+            hostname: hostname.to_string(),
+            username: username.to_string(),
+            backup_name: backup_name.to_string(),
+        }
+    }
+}
+
+impl Display for BackupRunName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{datetimestamp}__{hostname}__{username}__{backup_name}",
+            datetimestamp = datetimestamp(self.datetime),
+            hostname = self.hostname,
+            username = self.username,
+            backup_name = self.backup_name)
+    }
+}
+
+impl From<BackupRunName> for String {
+    fn from(run_name: BackupRunName) -> String {
+        run_name.to_string()
+    }
+}
+
+impl FromStr for BackupRunName {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        let parts = s.split("__").collect::<Vec<&str>>();
+        let datetime = from_datetimestamp(parts[0]);
+        let hostname = parts[1];
+        let username = parts[2];
+        let backup_name = parts[3];
+        Ok(Self::new(datetime, hostname, username, backup_name))
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -37,15 +74,22 @@ impl BackupType {
     }
 }
 
-pub fn find_last_backup(backup_type: BackupType, backup_name: &str, host: &str, backup_storage_dir: &Path) -> Option<PathBuf> {
+pub fn find_last_backup(backup_type: BackupType, hostname: &str, username: &str, backup_name: &str, backup_storage_dir: &Path) -> Option<PathBuf> {
     let backup_dir = backup_storage_dir.join(backup_type.subdir_name());
 
-    let filename_ending = format!("_{backup_name}_{host}");
     let mut entries = fs::read_dir(&backup_dir).unwrap()
         .map(|entry| entry.unwrap())
         .filter(|entry| {
-            entry.metadata().unwrap().is_dir()
-            && entry.file_name().to_str().unwrap().ends_with(&filename_ending)
+            if !entry.metadata().is_ok_and(|metadata| metadata.is_dir()) {
+                return false;
+            }
+
+            let run_name = match BackupRunName::from_str(entry.file_name().to_str().unwrap()) {
+                Ok(run_name) => run_name,
+                Err(_) => return false,
+            };
+
+            run_name.username == username && run_name.hostname == hostname && run_name.backup_name == backup_name
         })
         .collect::<Vec<_>>();
 
@@ -134,11 +178,11 @@ impl BackupJobOutputImpl for BackupJobOutputIncremental {
 
 /// Performs a full backup. Returns the path to the backup directory created.
 pub(crate) fn backup_full(cfg_backup: &BackupConfigBackup, config: &BackupConfig) -> Result<BackupJobOutput> {
-    let run_name = backup_run_name(datetime_now(), &cfg_backup.name, hostname());
+    let run_name = BackupRunName::new(datetime_now(), hostname(), username(), &cfg_backup.name);
     let source_dir = cfg_backup.source_dir_path();
     let dest_dir = config.backup_storage_dir_path()
         .join(paths::BACKUP_FULL_DIRNAME)
-        .join(&run_name);
+        .join(run_name.to_string());
 
     let mut rsync_cmd = rsync::cmd_rsync_full(&source_dir, &dest_dir);
     let output = rsync_cmd.output().unwrap();
@@ -157,15 +201,16 @@ pub(crate) fn backup_full(cfg_backup: &BackupConfigBackup, config: &BackupConfig
 /// Performs an incremental backup. Returns the path to the backup directory created.
 pub(crate) fn backup_incremental(cfg_backup: &BackupConfigBackup, config: &BackupConfig) -> Result<BackupJobOutput> {
     let source_dir = cfg_backup.source_dir_path();
-    let run_name = backup_run_name(datetime_now(), &cfg_backup.name, hostname());
+    let run_name = BackupRunName::new(datetime_now(), hostname(), username(), &cfg_backup.name);
     let dest_dir = config.backup_storage_dir_path()
         .join(paths::BACKUP_INCREMENTAL_DIRNAME)
-        .join(&run_name);
+        .join(run_name.to_string());
 
     let last_full_dir = find_last_backup(
             BackupType::Full,
-            &cfg_backup.name,
             hostname(),
+            username(),
+            &cfg_backup.name,
             &config.backup_storage_dir_path()
         ).ok_or_else(|| Error::Generic("No full backup found".to_string()))?;
 
@@ -203,8 +248,9 @@ pub(crate) fn backup_job_due(
 ) -> Result<Option<BackupJob>> {
     let last_full_backup = find_last_backup(
         BackupType::Full,
-        &cfg_backup.name,
         hostname(),
+        username(),
+        &cfg_backup.name,
         &config.backup_storage_dir_path());
 
     let last_full_backup = match last_full_backup {
@@ -213,7 +259,7 @@ pub(crate) fn backup_job_due(
     };
 
     let last_full_dirname = last_full_backup.file_name().unwrap().to_str().unwrap();
-    let (last_full_datetime, _, _) = parse_backup_run_name(&last_full_dirname);
+    let last_full_datetime = BackupRunName::from_str(&last_full_dirname).unwrap().datetime;
     let next_full_datetime = cron::Schedule::from(config.schedule(&cfg_backup.full_schedule).unwrap())
         .after(&last_full_datetime)
         .next()
@@ -225,14 +271,14 @@ pub(crate) fn backup_job_due(
 
     let last_incremental = find_last_backup(
         BackupType::Incremental,
-        &cfg_backup.name,
         hostname(),
+        username(),
+        &cfg_backup.name,
         &config.backup_storage_dir_path());
     
     let after_datetime = if let Some(last_incremental_dir) = last_incremental {
         let last_incremental_dirname = last_incremental_dir.file_name().unwrap().to_str().unwrap();
-        let (last_incremental_datetime, _, _) = parse_backup_run_name(&last_incremental_dirname);
-        last_incremental_datetime
+        BackupRunName::from_str(&last_incremental_dirname).unwrap().datetime
     } else {
         last_full_datetime
     };

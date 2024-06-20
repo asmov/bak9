@@ -71,7 +71,7 @@ fn run_backup_manual(
         if !cli.quiet {
             println!("{} Backed up {} to {}",
                 bak9_info_log_prefix(),
-                cfg_backup.name.yellow(),
+                cfg_backup.name.cyan(),
                 result.dest_dir().to_str().unwrap().cyan());
         }
 

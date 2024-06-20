@@ -20,16 +20,7 @@ fn run_config_setup(config_path: &Path, force: bool) -> Result<bool> {
 
     if !force {
         println!("{} Config file not found: {}", "warning:".yellow(), config_path.to_str().unwrap().cyan());
-        print!("{} Would you like to create it now? {} ", "confirm:".bright_yellow(), "[y/N]:".magenta());
-
-        std::io::stdout().flush()
-            .expect("Failed to flush stdout");
-
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input)
-            .expect("Failed to read input");
-
-        if input.trim().to_lowercase() != "y" {
+        if !confirm("Would you like to create it now?")? {
             return Ok(false);
         }
     }   
@@ -42,7 +33,8 @@ fn run_config_setup(config_path: &Path, force: bool) -> Result<bool> {
         .map_err(|e| Error::new_file_io(&config_path, e))?;
 
     println!("Config file created: {}", config_path.to_str().unwrap().cyan());
-    println!("Edit your config with {}\nValidate your config with {}", "bak9 config edit".yellow(), "bak9 config verify".yellow());
+    println!("Edit your config with {}\nValidate your config with {}",
+        "bak9 config edit".yellow(), "bak9 config verify".yellow());
 
     if confirm("Would you like to edit it now?")? {
         run_config_edit(config_path)

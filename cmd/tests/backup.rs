@@ -121,15 +121,16 @@ mod tests {
             _ => panic!("unexpected result"),
         };
 
-        let yesterday_run_name = bak9::backup::backup_run_name(
+        let yesterday_run_name = bak9::backup::BackupRunName::new(
             chrono::Local::now().checked_sub_signed(chrono::Duration::days(1)).unwrap(),
-            &config.backups[0].name,
             bak9::backup::hostname(),
+            bak9::backup::username(),
+            &config.backups[0].name,
         );
 
         let yesterday_backup_run_dir = test.temp_dir().join("strg/backup")
             .join(paths::BACKUP_FULL_DIRNAME)
-            .join(yesterday_run_name);
+            .join(yesterday_run_name.to_string());
 
         fs::rename(&result.dest_dir, yesterday_backup_run_dir).unwrap();
     }
