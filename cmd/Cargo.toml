@@ -19,11 +19,11 @@ colored = "2"
 clap = { version = "4", features = ["derive"] }
 lazy_static = "1"
 whoami = "1.5.1"
+strum = { version = "0.26.2", features = ["derive"] }
+strip-ansi-escapes = "0.2.0"
 
 [dev-dependencies]
-function_name = "0"
 asmov-testing = { path = "../../common/testing" }
 lazy_static = "1.4.0"
 dir-diff = "0.3.3"
 regex = "1.10.5"
-strip-ansi-escapes = "0.2.0"

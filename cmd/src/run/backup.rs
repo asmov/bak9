@@ -1,5 +1,5 @@
 use colored::Colorize;
-use crate::{backup::*, cli::*, config::*, paths, error::*};
+use crate::{backup::*, cli::*, config::*, log::*, paths, error::*};
 
 pub fn run_backup(cli: &Cli, subcmd: &BackupCommand, config: Option<&BackupConfig>) -> BackupJobResults {
     let config = select_config!(cli, config);
@@ -20,8 +20,15 @@ fn run_backup_scheduled(_cli: &Cli, config: &BackupConfig) -> BackupJobResults {
         }
     }
 
+    if jobs.is_empty() {
+        Log::get().info("No backups are due");
+        return Ok(Vec::new());
+    }
+
     let mut results = Vec::new();
     for (cfg_backup, job) in jobs {
+        Log::get().info(&format!("Began {job} backup of `{}`", cfg_backup.name));
+
         let result = match job {
             BackupJob::Full => {
                 backup_full(&cfg_backup, &config)?
@@ -32,6 +39,7 @@ fn run_backup_scheduled(_cli: &Cli, config: &BackupConfig) -> BackupJobResults {
         };
 
         results.push(result);
+        Log::get().info(&format!("Completed {job} backup of `{}`", cfg_backup.name));
     }
 
     Ok(results)

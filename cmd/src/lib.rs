@@ -7,6 +7,7 @@ pub mod cli;
 pub mod cmd;
 pub mod backup;
 pub mod run;
+pub mod log;
 
 pub use error::{Error, Result};
 pub use run::run_main as run;

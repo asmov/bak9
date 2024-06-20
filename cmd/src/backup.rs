@@ -230,7 +230,8 @@ pub(crate) fn backup_incremental(cfg_backup: &BackupConfigBackup, config: &Backu
     }))
 }
  
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, strum::Display)]
+#[strum(serialize_all = "snake_case")]
 pub(crate) enum BackupJob {
     Full,
     Incremental,
@@ -239,7 +240,6 @@ pub(crate) enum BackupJob {
     //SyncIncremental,
     //SyncArchive,
 }
-
 
 /// Check to see if it's time to run a backup.
 pub(crate) fn backup_job_due(

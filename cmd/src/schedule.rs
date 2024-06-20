@@ -13,7 +13,7 @@ pub fn from_datetimestamp(datetimestamp: &str) -> chrono::DateTime<chrono::Local
     chrono::Local.from_local_datetime(&datetime).unwrap()
 }
  
-pub fn datetimestamp_today() -> String {
+pub fn datetimestamp_now() -> String {
     chrono::Local::now()
         .format(&DATETIMESTAMP_FORMAT)
         .to_string()

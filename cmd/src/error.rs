@@ -79,22 +79,3 @@ impl Error {
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
-
-pub fn make_log_prefix(topic: &str, status: &str, color: colored::Color) -> String {
-    let now = chrono::Local::now();
-    let prefix = format!("[{:0>2}:{:0>2}:{:0>2} {topic}]{status}",
-        now.hour(),
-        now.minute(),
-        now.second());
-
-    prefix.color(color).to_string()
-}
-
-pub fn bak9_error_log_prefix() -> String {
-    make_log_prefix(strings::BAK9, " error:", colored::Color::Red)
-}
-
-pub fn bak9_info_log_prefix() -> String {
-    make_log_prefix(strings::BAK9, "", colored::Color::Green)
-}
-
