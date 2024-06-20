@@ -73,11 +73,11 @@ pub fn setup_backup_storage_dir(backup_storage_dir: &Path) -> Result<()> {
 pub fn verify_backup_dirs(config: &config::BackupConfig) -> Result<()> {
     let backup_storage_dir = &config.backup_storage_dir_path();
     let backup_storage_dir = backup_storage_dir.canonicalize()
-        .map_err(|e| Error::new_configured_path(&backup_storage_dir, config::KEY_BACKUP_STORAGE_DIR, e))?;
+        .map_err(|e| Error::new_configured_dir(&backup_storage_dir, config::KEY_BACKUP_STORAGE_DIR, e))?;
 
     for subdir in backup_storage_subdirs(&backup_storage_dir) {
         subdir.canonicalize()
-            .map_err(|e| Error::new_configured_path(&subdir, config::KEY_BACKUP_STORAGE_DIR, e))?;
+            .map_err(|e| Error::new_configured_subdir(&subdir, config::KEY_BACKUP_STORAGE_DIR, e))?;
     }
 
     Ok(())

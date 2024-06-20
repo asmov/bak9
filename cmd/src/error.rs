@@ -23,6 +23,12 @@ pub enum Error {
     #[error("Config item {} not found for schema {}", name.cyan(), schema.cyan())]
     ConfigReferenceNotFound { schema: &'static str, name: String },
 
+    #[error("Directory {} not found. (config: {})", path.cyan(), config_key.cyan())]
+    ConfiguredDirNotFound { path: String, config_key: String },
+
+    #[error("Subdirectory {} not found. (config: {})", path.cyan(), config_key.cyan())]
+    ConfiguredSubdirNotFound { path: String, config_key: String },
+
     #[error("{0}")]
     Generic(String)
 }
@@ -50,6 +56,20 @@ impl Error {
         }
     }
 
+    pub fn new_configured_dir(path: &Path, config_key: &str, _e: std::io::Error) -> Self {
+        Self::ConfiguredDirNotFound {
+            config_key: config_key.to_string(),
+            path: path.to_str().unwrap().to_string(),
+        }
+    }
+
+    pub fn new_configured_subdir(path: &Path, config_key: &str, _e: std::io::Error) -> Self {
+        Self::ConfiguredSubdirNotFound {
+            config_key: config_key.to_string(),
+            path: path.to_str().unwrap().to_string(),
+        }
+    }
+
     pub fn new_file_io(path: &Path, err: impl std::error::Error) -> Self {
         Self::FileIO {
             path: path.to_str().unwrap().to_string(),
@@ -62,7 +82,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 pub fn make_log_prefix(topic: &str, status: &str, color: colored::Color) -> String {
     let now = chrono::Local::now();
-    let prefix = format!("[{:0<2}:{:0<2}:{:0<2} {topic}]{status}",
+    let prefix = format!("[{:0>2}:{:0>2}:{:0>2} {topic}]{status}",
         now.hour(),
         now.minute(),
         now.second());

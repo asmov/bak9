@@ -64,7 +64,7 @@ mod tests {
             backups: vec![
                 bak9::config::BackupConfigBackup {
                     name: "home".to_string(),
-                    source_dir: test.imported_fixture_dir(&testlib::NAMEPATH)
+                    source_dir: test.imported_fixture_dir(&testlib::testlib_namepath())
                         .join(testlib::MOCK_FS_DIRNAME)
                         .join(format!("{}{source_version}", testlib::SOURCE_PREFIX))
                         .join(testlib::HOME_TESTUSR)

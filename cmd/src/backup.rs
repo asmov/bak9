@@ -1,14 +1,10 @@
-use std::{fs, path::{PathBuf, Path}};
+use std::{sync::OnceLock, fs, path::{PathBuf, Path}};
 use chrono;
-use lazy_static::lazy_static;
 use crate::{error::*, cmd::rsync, config::*, paths, schedule::*};
         
-lazy_static! {
-    static ref HOSTNAME: String = hostname::get().unwrap().into_string().unwrap();
-}
-
 pub fn hostname() -> &'static str {
-    &HOSTNAME
+    static HOSTNAME: OnceLock<String> = OnceLock::new();
+    &HOSTNAME.get_or_init(|| hostname::get().unwrap().into_string().unwrap())
 }
 
 pub fn backup_run_name(datetime: chrono::DateTime<chrono::Local>, backup_name: &str, host: &str) -> String {
@@ -66,6 +62,12 @@ pub enum BackupJobOutput {
     Incremental (BackupJobOutputIncremental)
 }
 
+pub trait BackupJobOutputImpl {
+    fn name(&self) -> &str;
+    fn source_dir(&self) -> &Path;
+    fn dest_dir(&self) -> &Path;
+}
+
 impl BackupJobOutputImpl for BackupJobOutput {
     fn name(&self) -> &str {
         match self {
@@ -87,12 +89,6 @@ impl BackupJobOutputImpl for BackupJobOutput {
             BackupJobOutput::Incremental(output) => output.dest_dir(),
         }
     }
-}
-
-pub trait BackupJobOutputImpl {
-    fn name(&self) -> &str;
-    fn source_dir(&self) -> &Path;
-    fn dest_dir(&self) -> &Path;
 }
 
 pub struct BackupJobOutputFull {

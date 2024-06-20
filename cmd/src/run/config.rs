@@ -1,21 +1,21 @@
 use std::{io::Write, path::Path};
 use colored::Colorize;
-use crate::{config, cli, Error, Result};
+use crate::{error::*, config::*, cli::*, paths::*};
 
-pub(crate) fn run_config(cli: &cli::Cli, subcmd: &cli::ConfigCommand) -> Result<bool> {
-    let config_path = config::select_config_path(&cli)?;
+pub(crate) fn run_config(cli: &Cli, subcmd: &ConfigCommand) -> Result<bool> {
+    let config_path = select_config_path(&cli)?;
     match subcmd {
-        cli::ConfigCommand::Setup => run_config_setup(&config_path, cli.force),
-        cli::ConfigCommand::Edit => run_config_edit(&config_path),
-        cli::ConfigCommand::Verify => run_config_verify(&config_path),
-        cli::ConfigCommand::Show => run_config_show(&config_path),
+        ConfigCommand::Setup => run_config_setup(&config_path, cli.force),
+        ConfigCommand::Edit => run_config_edit(&config_path),
+        ConfigCommand::Verify => run_config_verify(&config_path, false),
+        ConfigCommand::Show => run_config_show(&config_path),
     }
 }
 
 fn run_config_setup(config_path: &Path, force: bool) -> Result<bool> {
     if config_path.exists() {
         println!("Verifying config file: {}", config_path.to_str().unwrap().cyan());
-        return run_config_verify(config_path);
+        return run_config_verify(config_path, true);
     }
 
     if !force {
@@ -38,13 +38,21 @@ fn run_config_setup(config_path: &Path, force: bool) -> Result<bool> {
         .expect("Failed to get parent directory");
     std::fs::create_dir_all(config_dir)
         .map_err(|e| Error::new_file_io(config_dir, e))?;
-    std::fs::write(&config_path, config::CONFIG_DEFAULTS)
+    std::fs::write(&config_path, CONFIG_DEFAULTS)
         .map_err(|e| Error::new_file_io(&config_path, e))?;
 
     println!("Config file created: {}", config_path.to_str().unwrap().cyan());
     println!("Edit your config with {}\nValidate your config with {}", "bak9 config edit".yellow(), "bak9 config verify".yellow());
 
-    print!("{} Would you like to edit it now? {} ", "confirm:".bright_yellow(), "[y/N]:".magenta());
+    if confirm("Would you like to edit it now?")? {
+        run_config_edit(config_path)
+    } else {
+        Ok(true)
+    }
+}
+
+fn confirm(question: &str) -> Result<bool> {
+    print!("{} {question} {} ", "confirm:".bright_yellow(), "[y/N]:".magenta());
 
     std::io::stdout().flush()
         .expect("Failed to flush stdout");
@@ -53,10 +61,9 @@ fn run_config_setup(config_path: &Path, force: bool) -> Result<bool> {
     std::io::stdin().read_line(&mut input)
         .expect("Failed to read input");
 
-    if input.trim().to_lowercase() != "y" {
-        run_config_edit(config_path)
-    } else {
-        Ok(true)
+    match input.trim().to_lowercase().as_str() {
+        "y" | "yes" => Ok(true),
+        _ => Ok(false),
     }
 }
 
@@ -72,7 +79,7 @@ fn run_config_edit(config_path: &Path) -> Result<bool> {
     }
 
     println!("Verifying edit");
-    run_config_verify(config_path)
+    run_config_verify(config_path, true)
 }
 
 /// Checks whether config_path exists and prints an error message if it does not.   
@@ -89,14 +96,52 @@ fn handle_config_file_not_found(config_path: &Path) -> bool {
     }
 }
 
-fn run_config_verify(config_path: &Path) -> Result<bool> {
+/// Returns the config file if it exists and is valid, otherwise returns None if the error was handled.
+fn verify_config_file(config_path: &Path) -> Result<Option<BackupConfig>> {
     if handle_config_file_not_found(config_path) {
-        return Ok(false);
+        return Ok(None);
     }
 
-    println!("{} Config is valid", "good:".green());
-    println!("{} Backup environment is valid", "good:".green());
-    Ok(true)
+    let config = match read_config(Some(config_path)) {
+        Ok(config) => config,
+        Err(e) => {
+            eprintln!("{} Config is invalid :: {e}", "error:".red());
+            return Ok(None);
+        }
+    };
+
+    Ok(Some(config))
+}
+
+
+fn run_config_verify(config_path: &Path, fix: bool) -> Result<bool> {
+    let config = match verify_config_file(config_path)? {
+        Some(config) => config,
+        None => return Ok(false),
+    };
+
+
+    if let Err(e) = verify_backup_dirs(&config) {
+        let problem = if fix { "error:".red() } else { "warning:".yellow() };
+        eprintln!("{problem} Backup environment is invalid:\n  {}", e.to_string().replace(" :: ", "\n  "));
+
+        if !fix {
+            eprintln!("  You may run {} to fix this.", "bak9 config setup".yellow());
+            if confirm("Would you like to create necessary directories now?")? {
+                println!("Creating directories ...");
+                setup_backup_storage_dir(&config.backup_storage_dir_path())?;
+                println!("Re-verifying ...");
+                run_config_verify(config_path, true)
+            } else {
+                Ok(false)
+            }
+        } else {
+            Ok(false)
+        }
+    } else {
+        println!("{} Backup environment is valid", "good:".green());
+        Ok(true)
+    }
 }
 
 fn run_config_show(config_path: &Path) -> Result<bool> {

@@ -25,7 +25,7 @@ mod tests {
     where
         S: AsRef<std::ffi::OsStr>
     {
-        let mock_root = test.imported_fixture_dir(&testlib::NAMEPATH)
+        let mock_root = test.imported_fixture_dir(&testlib::testlib_namepath())
             .join(testlib::MOCK_FS_DIRNAME)
             .join(format!("{}{source_num}", testlib::SOURCE_PREFIX)); 
         let output = process::Command::new(BIN_EXE)
@@ -36,14 +36,14 @@ mod tests {
             .output()
             .unwrap();
 
+        let stdout = strip_ansi_escapes::strip_str(String::from_utf8(output.stdout).unwrap());
+        let stderr = strip_ansi_escapes::strip_str(String::from_utf8(output.stderr).unwrap());
+
         if let Some(success) = assert_success {
-            assert_eq!(success, output.status.success(),
-                "Command failed. stdout: {} :: stderr: {}",
-                String::from_utf8(output.stdout).unwrap(), String::from_utf8(output.stderr).unwrap());
+            assert_eq!(success, output.status.success(), "Command failed. stdout: {stdout} :: stderr: {stderr}");
         }
 
-        (   strip_ansi_escapes::strip_str(String::from_utf8(output.stdout).unwrap()),
-            strip_ansi_escapes::strip_str(String::from_utf8(output.stderr).unwrap()))
+        (stdout, stderr)
     }
 
     /// Returns the (name, dest_dir) of each successful backup.
@@ -102,7 +102,6 @@ mod tests {
         let (stdout, stderr) = exe_bak9(&test, 1, Some(true), &["backup", "full", "home-testusr"]);
         assert_eq!("", stderr);
         let results = parse_stdout_backup_results(&stdout);
-        dbg!(&results);
         assert_eq!(1, results.len());
         assert_eq!("home-testusr", results[0].0);
         assert!(!dir_diff::is_different(&source_1_dir, &results[0].1.join(testlib::TESTUSR)).unwrap());
@@ -122,7 +121,6 @@ mod tests {
         let (stdout, stderr) = exe_bak9(&test, 1, Some(true), &["backup", "full", "home-testusr"]);
         assert_eq!("", stderr);
         let results = parse_stdout_backup_results(&stdout);
-        dbg!(&results);
         assert_eq!(1, results.len());
         assert_eq!("home-testusr", results[0].0);
         assert!(!dir_diff::is_different(&source_1_dir, &results[0].1.join(testlib::TESTUSR)).unwrap());
@@ -130,7 +128,6 @@ mod tests {
         let (stdout, stderr) = exe_bak9(&test, 2, Some(true), &["backup", "incremental", "home-testusr"]);
         assert_eq!("", stderr);
         let results = parse_stdout_backup_results(&stdout);
-        dbg!(&results);
         assert_eq!(1, results.len());
         assert_eq!("home-testusr", results[0].0);
         assert!(!dir_diff::is_different(&source_2_dir, &results[0].1.join(testlib::TESTUSR)).unwrap());
