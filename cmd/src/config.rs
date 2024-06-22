@@ -2,7 +2,7 @@ use std::{fs, path::{PathBuf, Path}};
 use validator::{Validate, ValidationError};
 use crate::{Error, Result, cli::*, paths};
 
-pub const KEY_BACKUP_STORAGE_DIR: &'static str = "backup_storage_dir";
+pub const CFG_BACKUP_STORAGE_DIR: &'static str = "backup_storage_dir";
 
 macro_rules! select_config {
     ($cli:ident, $config:ident) => {
@@ -70,12 +70,12 @@ pub struct BackupConfig {
 impl BackupConfig {
     pub fn read(filepath: &Path) -> Result<Self> {
         let content = fs::read_to_string(filepath)
-            .map_err(|e| Error::new_config_file(filepath, e))?;
+            .map_err(|e| Error::config_file(filepath, e))?;
         let config: Self = toml::from_str(&content)
-            .map_err(|e| Error::new_config_file(filepath, e))?;
+            .map_err(|e| Error::config_file(filepath, e))?;
 
         config.validate()
-            .map_err(|e| Error::new_config_file(filepath, e))?;
+            .map_err(|e| Error::config_file(filepath, e))?;
 
         Ok(config)
     }
@@ -247,7 +247,7 @@ impl From<&BackupConfigSchedule> for cron::Schedule {
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, validator::Validate)]
 pub struct BackupConfigBackup {
-    #[validate(does_not_contain(pattern = "_"))]
+    #[validate(does_not_contain(pattern = "__"))]
     pub name: String,
     pub source_dir: String,
     pub full_schedule: String,

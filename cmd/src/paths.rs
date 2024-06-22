@@ -33,12 +33,12 @@ pub fn setup_home_config(force: bool) -> Result<()> {
 
     if !home_config_dir.exists() {
         fs::create_dir_all(&home_config_dir)
-            .map_err(|e| Error::new_file_io(&home_config_dir, e))?;
+            .map_err(|e| Error::file_io(&home_config_dir, e))?;
     }
 
     if !home_config_file.exists() || force {
         fs::write(&home_config_file, config::CONFIG_DEFAULTS)
-            .map_err(|e| Error::new_file_io(&home_config_file, e))?;
+            .map_err(|e| Error::file_io(&home_config_file, e))?;
     }
 
     Ok(())
@@ -56,15 +56,15 @@ pub fn backup_storage_subdirs(backup_storage_dir: &Path) -> Vec<PathBuf> {
 pub fn setup_backup_storage_dir(backup_storage_dir: &Path) -> Result<()> {
     if !backup_storage_dir.exists() {
         fs::create_dir_all(&backup_storage_dir)
-            .map_err(|e| Error::new_file_io(&backup_storage_dir, e))?;
+            .map_err(|e| Error::file_io(&backup_storage_dir, e))?;
     }
 
     let backup_storage_dir = backup_storage_dir.canonicalize()
-        .map_err(|e| Error::new_file_io(&backup_storage_dir, e))?;
+        .map_err(|e| Error::file_io(&backup_storage_dir, e))?;
 
     for subdir in backup_storage_subdirs(&backup_storage_dir) {
         fs::create_dir_all(&subdir)
-            .map_err(|e| Error::new_file_io(&subdir, e))?;
+            .map_err(|e| Error::file_io(&subdir, e))?;
     }
 
     Ok(())
@@ -73,11 +73,11 @@ pub fn setup_backup_storage_dir(backup_storage_dir: &Path) -> Result<()> {
 pub fn verify_backup_dirs(config: &config::BackupConfig) -> Result<()> {
     let backup_storage_dir = &config.backup_storage_dir_path();
     let backup_storage_dir = backup_storage_dir.canonicalize()
-        .map_err(|e| Error::new_configured_dir(&backup_storage_dir, config::KEY_BACKUP_STORAGE_DIR, e))?;
+        .map_err(|e| Error::configured_dir(&backup_storage_dir, config::CFG_BACKUP_STORAGE_DIR, e))?;
 
     for subdir in backup_storage_subdirs(&backup_storage_dir) {
         subdir.canonicalize()
-            .map_err(|e| Error::new_configured_subdir(&subdir, config::KEY_BACKUP_STORAGE_DIR, e))?;
+            .map_err(|e| Error::configured_subdir(&subdir, config::CFG_BACKUP_STORAGE_DIR, e))?;
     }
 
     Ok(())

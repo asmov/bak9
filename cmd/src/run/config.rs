@@ -28,9 +28,9 @@ fn run_config_setup(config_path: &Path, force: bool) -> Result<bool> {
     let config_dir = config_path.parent()
         .expect("Failed to get parent directory");
     std::fs::create_dir_all(config_dir)
-        .map_err(|e| Error::new_file_io(config_dir, e))?;
+        .map_err(|e| Error::file_io(config_dir, e))?;
     std::fs::write(&config_path, CONFIG_DEFAULTS)
-        .map_err(|e| Error::new_file_io(&config_path, e))?;
+        .map_err(|e| Error::file_io(&config_path, e))?;
 
     println!("Config file created: {}", config_path.to_str().unwrap().cyan());
     println!("Edit your config with {}\nValidate your config with {}",

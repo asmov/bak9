@@ -1,6 +1,6 @@
 use std::{fmt::Display, fs, path::{Path, PathBuf}, str::FromStr, sync::OnceLock};
 use chrono;
-use crate::{error::*, cmd::rsync, config::*, paths, schedule::*};
+use crate::{error::*, cmd::rsync, config::*, paths, schedule::*, job::*};
         
 pub fn hostname() -> &'static str {
     static HOSTNAME: OnceLock<String> = OnceLock::new();
@@ -188,7 +188,7 @@ pub(crate) fn backup_full(cfg_backup: &BackupConfigBackup, config: &BackupConfig
     let output = rsync_cmd.output().unwrap();
 
     if !output.status.success() {
-        return Err(Error::Generic("TODO: RSYNC FAILED".to_string()));
+        return Err(Error::rsync(output));
     }
 
     Ok(BackupJobOutput::Full(BackupJobOutputFull {
@@ -232,7 +232,7 @@ pub(crate) fn backup_incremental(cfg_backup: &BackupConfigBackup, config: &Backu
  
 #[derive(Clone, Copy, Debug, PartialEq, Eq, strum::Display)]
 #[strum(serialize_all = "snake_case")]
-pub(crate) enum BackupJob {
+pub(crate) enum BackupJobOld {
     Full,
     Incremental,
     //Archive,
@@ -245,7 +245,7 @@ pub(crate) enum BackupJob {
 pub(crate) fn backup_job_due(
     cfg_backup: &BackupConfigBackup,
     config: &BackupConfig,
-) -> Result<Option<BackupJob>> {
+) -> Result<JobQueue> {
     let last_full_backup = find_last_backup(
         BackupType::Full,
         hostname(),
@@ -255,7 +255,21 @@ pub(crate) fn backup_job_due(
 
     let last_full_backup = match last_full_backup {
         Some(path) => path,
-        None => return Ok(Some(BackupJob::Full)),
+        None => {
+            let subqueue = vec![
+                JobQueueEntry::Job(Job::Backup(
+                    BackupJob::plan(BackupJobPlan {
+                        backup_type: BackupType::Full,
+                        backup_name: cfg_backup.name.clone() }))),
+                JobQueueEntry::Job(Job::Archive(
+                    ArchiveJob::plan(ArchiveJobPlan {
+                        backup_name: cfg_backup.name.clone() }))),
+                JobQueueEntry::Job(Job::SyncBackup),
+                JobQueueEntry::Job(Job::SyncArchive),
+            ];
+
+            return Ok(vec![JobQueueEntry::Queue(subqueue)]);
+        },
     };
 
     let last_full_dirname = last_full_backup.file_name().unwrap().to_str().unwrap();
@@ -294,6 +308,83 @@ pub(crate) fn backup_job_due(
         Ok(None)
     }
 }
+
+pub struct BackupJob {
+    plan: BackupJobPlan,
+    input: Option<BackupJobInput>,
+    output: Option<BackupJobOutput>,
+    status: JobStatus,
+}
+
+impl BackupJob {
+}
+
+impl JobImpl for BackupJob {
+    type Plan = BackupJobPlan;
+    type Input = BackupJobInput;
+    type Output = BackupJobOutput;
+
+    fn plan(plan: Self::Plan) -> Self {
+        Self {
+            plan: plan,
+            input: None,
+            output: None,
+            status: JobStatus::Planned,
+        }
+    }
+
+    fn prepare(&mut self, prep: Prep<Self::Input>) -> Result<&Self::Input> {
+        let input = match prep {
+            Prep::Input(input) => input,
+            Prep::Series(_,_) => panic!("Unexpected queue"),
+        };
+
+        self.input = Some(input);
+        Ok(self.input.as_ref().expect("Some"))
+    }
+
+    fn get_plan(&self) -> &Self::Plan {
+        &self.plan
+    }
+
+    fn input(&self) -> Option<&Self::Input> {
+        self.input.as_ref()
+    }
+
+    fn output(&self) -> Option<&Self::Output> {
+        self.output.as_ref()
+    }
+
+    fn status(&self) -> JobStatus {
+        self.status
+    }
+
+    fn run(&mut self) -> &Self::Output {
+        self.status = JobStatus::Running;
+
+        self.status = JobStatus::Completed;
+        self.output = Some(BackupJobOutput {});
+        self.output.as_ref().expect("Some")
+    }
+}
+
+pub struct BackupJobPlan {
+    backup_type: BackupType,
+    backup_name: String,
+}
+
+pub struct BackupJobInput {
+    run_name: BackupRunName,
+    source_dir: PathBuf,
+    incremental_source_dir: Option<PathBuf>,
+    dest_dir: PathBuf,
+}
+
+pub struct BackupJobOutput {}
+
+impl JobPlan for BackupJobPlan {}
+impl JobInput for BackupJobInput {}
+impl JobOutput for BackupJobOutput {}
 
 
 
