@@ -1,7 +1,7 @@
 use colored::Colorize;
-use crate::{backup::*, cli::*, config::*, log::*, paths, error::*};
+use crate::{backup::*, cli::*, config::*, log::*, paths, error::*, job::*};
 
-pub fn run_backup(cli: &Cli, subcmd: &BackupCommand, config: Option<&BackupConfig>) -> BackupJobResults {
+pub fn run_backup(cli: &Cli, subcmd: &BackupCommand, config: Option<&BackupConfig>) -> JobResults {
     let config = select_config!(cli, config);
     verify_environment(&config)?;
 
@@ -12,11 +12,11 @@ pub fn run_backup(cli: &Cli, subcmd: &BackupCommand, config: Option<&BackupConfi
     }
 }
 
-fn run_backup_scheduled(_cli: &Cli, config: &BackupConfig) -> BackupJobResults {
-    let mut jobs = Vec::new();
+fn run_backup_scheduled(_cli: &Cli, config: &BackupConfig) -> JobResults {
+    let mut jobs = JobQueue::new();
     for cfg_backup in &config.backups {
-        if let Some(job) = backup_job_due(&cfg_backup, &config)? {
-            jobs.push((cfg_backup, job));
+        if let Some(queue_entry) = backup_job_due(&cfg_backup, &config)? {
+            jobs.push(queue_entry);
         }
     }
 
@@ -25,24 +25,7 @@ fn run_backup_scheduled(_cli: &Cli, config: &BackupConfig) -> BackupJobResults {
         return Ok(Vec::new());
     }
 
-    let mut results = Vec::new();
-    for (cfg_backup, job) in jobs {
-        Log::get().info(&format!("Began {job} backup of `{}`", cfg_backup.name));
-
-        let result = match job {
-            BackupJob::Full => {
-                backup_full(&cfg_backup, &config)?
-            },
-            BackupJob::Incremental => {
-                backup_incremental(&cfg_backup, &config)?
-            }
-        };
-
-        results.push(result);
-        Log::get().info(&format!("Completed {job} backup of `{}`", cfg_backup.name));
-    }
-
-    Ok(results)
+    run_jobs(jobs, &config)
 }
 
 const ALL: &str = "all";
@@ -52,7 +35,7 @@ fn run_backup_manual(
     cmd: &ManualBackupCommand,
     config: &BackupConfig,
     backup_type: BackupType
-) -> BackupJobResults {
+) -> JobResults {
     let mut cfg_backups = Vec::new();
     if cmd.name == ALL {
         cfg_backups.extend(config.backups.iter());
@@ -80,13 +63,13 @@ fn run_backup_manual(
             println!("{} Backed up {} to {}",
                 bak9_info_log_prefix(),
                 cfg_backup.name.cyan(),
-                result.dest_dir().to_str().unwrap().cyan());
+                result.dest_dir.to_str().unwrap().cyan());
         }
 
         results.push(result);
     }
 
-    Ok(results)
+    todo!()
 }
 
 /// Verify that the runtime environment that has been configured is valid.  

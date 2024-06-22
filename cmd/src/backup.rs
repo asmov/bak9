@@ -1,6 +1,6 @@
 use std::{fmt::Display, fs, path::{Path, PathBuf}, str::FromStr, sync::OnceLock};
 use chrono;
-use crate::{error::*, cmd::rsync, config::*, paths, schedule::*, job::*};
+use crate::{cmd::rsync, config::*, error::*, job::*, paths, run::backup, schedule::*};
         
 pub fn hostname() -> &'static str {
     static HOSTNAME: OnceLock<String> = OnceLock::new();
@@ -12,6 +12,7 @@ pub fn username() -> &'static str {
     &USERNAME.get_or_init(|| whoami::username())
 }
 
+#[derive(Debug, Clone)]
 pub struct BackupRunName {
     pub datetime: chrono::DateTime<chrono::Local>,
     pub hostname: String,
@@ -99,82 +100,7 @@ pub fn find_last_backup(backup_type: BackupType, hostname: &str, username: &str,
         .and_then(|entry| Some(entry.path().to_path_buf()))
 }
 
-pub type BackupJobResults = Result<Vec<BackupJobOutput>>;
-
-pub enum BackupJobOutput {
-    Full (BackupJobOutputFull),
-    Incremental (BackupJobOutputIncremental)
-}
-
-pub trait BackupJobOutputImpl {
-    fn name(&self) -> &str;
-    fn source_dir(&self) -> &Path;
-    fn dest_dir(&self) -> &Path;
-}
-
-impl BackupJobOutputImpl for BackupJobOutput {
-    fn name(&self) -> &str {
-        match self {
-            BackupJobOutput::Full(output) => output.name(),
-            BackupJobOutput::Incremental(output) => output.name(),
-        }
-    }
-
-    fn source_dir(&self) -> &Path {
-        match self {
-            BackupJobOutput::Full(output) => output.source_dir(),
-            BackupJobOutput::Incremental(output) => output.source_dir(),
-        }
-    }
-
-    fn dest_dir(&self) -> &Path {
-        match self {
-            BackupJobOutput::Full(output) => output.dest_dir(),
-            BackupJobOutput::Incremental(output) => output.dest_dir(),
-        }
-    }
-}
-
-pub struct BackupJobOutputFull {
-    pub name: String,
-    pub source_dir: PathBuf,
-    pub dest_dir: PathBuf
-}
-
-impl BackupJobOutputImpl for BackupJobOutputFull {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    fn source_dir(&self) -> &Path {
-        &self.source_dir
-    }
-
-    fn dest_dir(&self) -> &Path {
-        &self.dest_dir
-    }
-}
-
-pub struct BackupJobOutputIncremental {
-    pub name: String,
-    pub source_dir: PathBuf,
-    pub full_dir: PathBuf,
-    pub dest_dir: PathBuf
-}
-
-impl BackupJobOutputImpl for BackupJobOutputIncremental {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    fn source_dir(&self) -> &Path {
-        &self.source_dir
-    }
-
-    fn dest_dir(&self) -> &Path {
-        &self.dest_dir
-    }
-}
+pub type JobResults = Result<JobQueue>;
 
 /// Performs a full backup. Returns the path to the backup directory created.
 pub(crate) fn backup_full(cfg_backup: &BackupConfigBackup, config: &BackupConfig) -> Result<BackupJobOutput> {
@@ -184,6 +110,7 @@ pub(crate) fn backup_full(cfg_backup: &BackupConfigBackup, config: &BackupConfig
         .join(paths::BACKUP_FULL_DIRNAME)
         .join(run_name.to_string());
 
+
     let mut rsync_cmd = rsync::cmd_rsync_full(&source_dir, &dest_dir);
     let output = rsync_cmd.output().unwrap();
 
@@ -191,11 +118,7 @@ pub(crate) fn backup_full(cfg_backup: &BackupConfigBackup, config: &BackupConfig
         return Err(Error::rsync(output));
     }
 
-    Ok(BackupJobOutput::Full(BackupJobOutputFull {
-        name: cfg_backup.name.clone(),
-        source_dir,
-        dest_dir,
-    }))
+    todo!()
 }
 
 /// Performs an incremental backup. Returns the path to the backup directory created.
@@ -222,30 +145,14 @@ pub(crate) fn backup_incremental(cfg_backup: &BackupConfigBackup, config: &Backu
         return Err(Error::Generic("TODO: RSYNC FAILED".to_string()));
     }
 
-    Ok(BackupJobOutput::Incremental(BackupJobOutputIncremental {
-        name: cfg_backup.name.clone(),
-        source_dir,
-        full_dir: last_full_dir,
-        dest_dir,
-    }))
-}
- 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, strum::Display)]
-#[strum(serialize_all = "snake_case")]
-pub(crate) enum BackupJobOld {
-    Full,
-    Incremental,
-    //Archive,
-    //SyncFull,
-    //SyncIncremental,
-    //SyncArchive,
+    todo!()
 }
 
 /// Check to see if it's time to run a backup.
 pub(crate) fn backup_job_due(
     cfg_backup: &BackupConfigBackup,
     config: &BackupConfig,
-) -> Result<JobQueue> {
+) -> Result<Option<JobQueueEntry>> {
     let last_full_backup = find_last_backup(
         BackupType::Full,
         hostname(),
@@ -255,21 +162,7 @@ pub(crate) fn backup_job_due(
 
     let last_full_backup = match last_full_backup {
         Some(path) => path,
-        None => {
-            let subqueue = vec![
-                JobQueueEntry::Job(Job::Backup(
-                    BackupJob::plan(BackupJobPlan {
-                        backup_type: BackupType::Full,
-                        backup_name: cfg_backup.name.clone() }))),
-                JobQueueEntry::Job(Job::Archive(
-                    ArchiveJob::plan(ArchiveJobPlan {
-                        backup_name: cfg_backup.name.clone() }))),
-                JobQueueEntry::Job(Job::SyncBackup),
-                JobQueueEntry::Job(Job::SyncArchive),
-            ];
-
-            return Ok(vec![JobQueueEntry::Queue(subqueue)]);
-        },
+        None => return Ok(Some(BackupJob::plan(BackupType::Full, &cfg_backup, config)))
     };
 
     let last_full_dirname = last_full_backup.file_name().unwrap().to_str().unwrap();
@@ -280,7 +173,7 @@ pub(crate) fn backup_job_due(
         .unwrap();
 
     if next_full_datetime <= chrono::Local::now() {
-        return Ok(Some(BackupJob::Full))
+        return Ok(Some(BackupJob::plan(BackupType::Full, &cfg_backup, config)));
     }
 
     let last_incremental = find_last_backup(
@@ -303,91 +196,99 @@ pub(crate) fn backup_job_due(
         .unwrap();
 
     if next_incremental_datetime <= chrono::Local::now() {
-        Ok(Some(BackupJob::Incremental))
+        Ok(Some(BackupJob::plan(BackupType::Incremental, &cfg_backup, config)))
     } else {
         Ok(None)
     }
 }
 
+#[derive(Debug)]
 pub struct BackupJob {
-    plan: BackupJobPlan,
-    input: Option<BackupJobInput>,
-    output: Option<BackupJobOutput>,
-    status: JobStatus,
+    pub(crate) backup_type: BackupType,
+    pub(crate) run_name: BackupRunName,
+    pub(crate) source_dir: PathBuf,
+    pub(crate) incremental_source_dir: Option<PathBuf>,
+    pub(crate) dest_dir: PathBuf,
+}
+
+impl JobTrait for BackupJob {
+    type Output = BackupJobOutput;
+
+    fn run(&self) -> Result<JobOutput> {
+        let mut rsync_cmd = rsync::cmd_rsync_full(&self.source_dir, &self.dest_dir);
+        let output = rsync_cmd.output().unwrap();
+
+        if !output.status.success() {
+            return Err(Error::rsync(output));
+        }
+
+        Ok(JobOutput::Backup(BackupJobOutput {
+            backup_type: self.backup_type,
+            run_name: self.run_name.clone(),
+            source_dir: self.source_dir.clone(),
+            incremental_source_dir: self.incremental_source_dir.clone(),
+            dest_dir: self.dest_dir.clone(),
+        }))
+    }
 }
 
 impl BackupJob {
-}
-
-impl JobImpl for BackupJob {
-    type Plan = BackupJobPlan;
-    type Input = BackupJobInput;
-    type Output = BackupJobOutput;
-
-    fn plan(plan: Self::Plan) -> Self {
-        Self {
-            plan: plan,
-            input: None,
-            output: None,
-            status: JobStatus::Planned,
-        }
-    }
-
-    fn prepare(&mut self, prep: Prep<Self::Input>) -> Result<&Self::Input> {
-        let input = match prep {
-            Prep::Input(input) => input,
-            Prep::Series(_,_) => panic!("Unexpected queue"),
+    pub fn plan(backup_type: BackupType, cfg_backup: &BackupConfigBackup, config: &BackupConfig) -> JobQueueEntry {
+        let run_name = BackupRunName::new(datetime_now(), hostname(), username(), &cfg_backup.name);
+        let source_dir = cfg_backup.source_dir_path();
+        let dest_dir = config.backup_storage_dir_path()
+            .join(backup_type.subdir_name())
+            .join(run_name.to_string());
+        let incremental_source_dir = if backup_type == BackupType::Incremental {
+            Some(find_last_backup(
+                BackupType::Full,
+                hostname(),
+                username(),
+                &cfg_backup.name,
+                &config.backup_storage_dir_path()
+            ).unwrap())
+        } else {
+            None
         };
 
-        self.input = Some(input);
-        Ok(self.input.as_ref().expect("Some"))
-    }
+        let archive_source_dir = dest_dir.clone();
+        let archive_dest_filepath = config.backup_storage_dir_path()
+            .join(paths::BACKUP_ARCHIVE_DIRNAME)
+            .join(format!("{}.tar.xz", run_name.to_string()));
+        let archive_run_name = run_name.clone();
 
-    fn get_plan(&self) -> &Self::Plan {
-        &self.plan
-    }
-
-    fn input(&self) -> Option<&Self::Input> {
-        self.input.as_ref()
-    }
-
-    fn output(&self) -> Option<&Self::Output> {
-        self.output.as_ref()
-    }
-
-    fn status(&self) -> JobStatus {
-        self.status
-    }
-
-    fn run(&mut self) -> &Self::Output {
-        self.status = JobStatus::Running;
-
-        self.status = JobStatus::Completed;
-        self.output = Some(BackupJobOutput {});
-        self.output.as_ref().expect("Some")
+        JobQueueEntry::Series(vec![
+            JobQueueEntry::Job {
+                job: Job::Backup(BackupJob {
+                    backup_type,
+                    run_name,
+                    source_dir,
+                    incremental_source_dir,
+                    dest_dir, }),
+                status: JobStatus::Ready,
+                result: None
+            },
+            JobQueueEntry::Job {
+                job: Job::Archive(ArchiveJob {
+                    backup_run_name: archive_run_name,
+                    source_dir: archive_source_dir,
+                    dest_filepath: archive_dest_filepath,
+                }),
+                status: JobStatus::Ready,
+                result: None
+            }
+        ])
     }
 }
 
-pub struct BackupJobPlan {
-    backup_type: BackupType,
-    backup_name: String,
+#[derive(Debug)]
+pub struct BackupJobOutput {
+    pub(crate) backup_type: BackupType,
+    pub(crate) run_name: BackupRunName,
+    pub(crate) source_dir: PathBuf,
+    pub(crate) incremental_source_dir: Option<PathBuf>,
+    pub(crate) dest_dir: PathBuf,
 }
 
-pub struct BackupJobInput {
-    run_name: BackupRunName,
-    source_dir: PathBuf,
-    incremental_source_dir: Option<PathBuf>,
-    dest_dir: PathBuf,
-}
-
-pub struct BackupJobOutput {}
-
-impl JobPlan for BackupJobPlan {}
-impl JobInput for BackupJobInput {}
-impl JobOutput for BackupJobOutput {}
-
-
-
-
-
+impl JobOutputTrait for BackupJobOutput {}
 
