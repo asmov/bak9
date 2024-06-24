@@ -214,7 +214,8 @@ impl BackupJob {
         let archive_source_dir = dest_dir.clone();
         let archive_dest_filepath = config.backup_storage_dir_path()
             .join(paths::BACKUP_ARCHIVE_DIRNAME)
-            .join(format!("{}.tar.xz", run_name.to_string()));
+            .join(run_name.to_string())
+            .with_extension(paths::TAR_XZ_EXTENSION);
         let archive_run_name = run_name.clone();
 
         let mut series = vec![

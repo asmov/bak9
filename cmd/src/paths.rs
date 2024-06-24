@@ -11,6 +11,8 @@ pub const BACKUP_LOGS_DIRNAME: &'static str = "logs";
 
 pub const ENV_BAK9_HOME: &'static str = "BAK9_HOME";
 
+pub const TAR_XZ_EXTENSION: &'static str = "tar.xz";
+
 pub fn expand_path(path_str: &str) -> PathBuf {
     shellexpand::env(path_str).unwrap().to_string().into()
 }

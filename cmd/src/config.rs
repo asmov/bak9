@@ -298,6 +298,42 @@ max_archives = 5
 schedule = "annual"
 max_archives = 4
 
+[[backup.sync]]
+remote_group = "roam"
+sync_full = true
+sync_incremental = true
+sync_archive = true
+
+[[backup.sync]]
+remote = "cloud"
+sync_full = true
+sync_incremental = true
+sync_archive = true
+
+[[remote]]
+name = "laptop1"
+host = "laptop1.local"
+backup_storage_dir = "/storage/backup"
+
+[[remote]]
+name = "desktop1"
+host = "desktop.local"
+backup_storage_dir = "/storage/backup"
+
+[[remote]]
+name = "cloud"
+host = "cloud.local"
+user = "backup"
+backup_storage_dir = "/home/$REMOTE_USER/backup"
+
+[[remote_group]]
+type = "roaming"
+name = "roam"
+remotes = [
+    "laptop1"
+    "desktop1"
+]
+
 [[schedule]]
 name = "daily"
 minute = 0
