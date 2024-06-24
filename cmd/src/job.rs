@@ -2,14 +2,13 @@
 //! [JobPlan]. When it is time to task the job out, the [JobPlan] is used to create a [JobInput], which finalizes exactly what
 //! the Job will do.
 
-use std::path::PathBuf;
 use crate::{backup::*, config::*, error::*, paths::BACKUP_ARCHIVE_DIRNAME};
 
 #[derive(strum::Display, Debug)]
 #[strum(serialize_all = "snake_case")]
 pub enum Job {
-    Backup(BackupJob),
-    Archive(ArchiveJob),
+    Backup(crate::backup::BackupJob),
+    Archive(crate::archive::ArchiveJob),
     SyncBackup,
     SyncArchive,
 }
@@ -35,8 +34,8 @@ impl Job {
 }
 
 pub enum JobOutput {
-    Backup(BackupJobOutput),
-    Archive(ArchiveJobOutput),
+    Backup(crate::backup::BackupJobOutput),
+    Archive(crate::archive::ArchiveJobOutput),
     SyncBackup,
     SyncArchive,
 }
@@ -70,58 +69,43 @@ pub enum JobStatus {
 
 pub trait JobOutputTrait {}
 
-#[derive(Debug)]
-pub struct ArchiveJob {
-    pub(crate) backup_run_name: BackupRunName,
-    pub(crate) source_dir: PathBuf,
-    pub(crate) dest_filepath: PathBuf
-}
+pub fn run_jobs(mut queue: JobQueue, config: &BackupConfig) -> JobResults {
+    run_job_entry(&mut queue, config)?;
 
-pub struct ArchiveJobOutput {
-    pub(crate) backup_run_name: BackupRunName,
-    pub(crate) source_dir: PathBuf,
-    pub(crate) dest_filepath: PathBuf
-}
-
-impl JobTrait for ArchiveJob {
-    type Output = ArchiveJobOutput;
-
-    fn run(&self) -> Result<JobOutput> {
-        todo!()
-    }
-}
-
-impl JobOutputTrait for ArchiveJobOutput {}
-
-impl ArchiveJobOutput {
-    pub fn new(backup_run_name: BackupRunName, source_dir: PathBuf, dest_filepath: PathBuf) -> Self {
-        Self {
-            backup_run_name,
-            source_dir,
-            dest_filepath
+    // Flatten the results. Input and status are no longer needed. Throw non-breaking errors now if any.
+    fn flatten_queue_results(queue: JobQueue) -> JobResults {
+        let mut outputs: Vec<JobOutput> = Vec::new();
+        for entry in queue {
+            match entry {
+                JobQueueEntry::Job{job:_, status:_, result} => outputs.push(result.unwrap()?),
+                JobQueueEntry::Series(series) => outputs.extend(flatten_queue_results(series)?)
+            }
         }
+
+        Ok(outputs)
     }
+
+    flatten_queue_results(queue)
 }
 
-
-pub fn run_job_entry(
-    queue: &mut JobQueue,
-    config: &BackupConfig,
-) -> Result<()> {
+fn run_job_entry(queue: &mut JobQueue, config: &BackupConfig) -> Result<()> {
     for entry in queue {
         match entry {
             JobQueueEntry::Job{job, status, result} => {
-                let job_result = job.run();
-
-                *status = if job_result.is_ok() {
-                    JobStatus::Completed
-                } else if job.break_on_error() {
-                    return Err(job_result.err().unwrap())
-                } else {
-                    JobStatus::Failed
-                };
-
-                *result = Some(job.run());
+                match job.run() {
+                    Ok(job_output) => {
+                        *status = JobStatus::Completed;
+                        *result = Some(Ok(job_output));
+                    },
+                    Err(err) => {
+                        if job.break_on_error() {
+                            return Err(err)
+                        } else {
+                            *status = JobStatus::Failed;
+                            *result = Some(Err(err));
+                        }
+                    }
+                }
             },
             JobQueueEntry::Series(ref mut series) => {
                 run_job_entry(series, config)?;
@@ -132,31 +116,3 @@ pub fn run_job_entry(
     Ok(())
 }
  
-pub fn run_jobs(mut queue: JobQueue, config: &BackupConfig) -> JobResults {
-    run_job_entry(&mut queue, config)?;
-    /*Log::get().info(&format!("Began {job} backup of `{}`", cfg_backup.name));
-
-    let result = match job {
-        BackupJob::Full => {
-            backup_full(&cfg_backup, &config)?
-        },
-        BackupJob::Incremental => {
-            backup_incremental(&cfg_backup, &config)?
-        }
-    };
-
-    results.push(result);
-    Log::get().info(&format!("Completed {job} backup of `{}`", cfg_backup.name));*/
-
-    Ok(queue)
-}
-
-
-
-
-
-
-
-
-
-

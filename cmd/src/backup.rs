@@ -1,6 +1,7 @@
 use std::{fmt::Display, fs, path::{Path, PathBuf}, str::FromStr, sync::OnceLock};
 use chrono;
-use crate::{cmd::rsync, config::*, error::*, job::*, paths, run::backup, schedule::*};
+use strum;
+use crate::{archive::*, log::*, cmd::rsync, config::*, error::*, job::*, paths, run::backup, schedule::*};
         
 pub fn hostname() -> &'static str {
     static HOSTNAME: OnceLock<String> = OnceLock::new();
@@ -60,7 +61,8 @@ impl FromStr for BackupRunName {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, strum::Display)]
+#[strum(serialize_all = "snake_case")]
 pub enum BackupType {
     Full,
     Incremental,
@@ -100,53 +102,7 @@ pub fn find_last_backup(backup_type: BackupType, hostname: &str, username: &str,
         .and_then(|entry| Some(entry.path().to_path_buf()))
 }
 
-pub type JobResults = Result<JobQueue>;
-
-/// Performs a full backup. Returns the path to the backup directory created.
-pub(crate) fn backup_full(cfg_backup: &BackupConfigBackup, config: &BackupConfig) -> Result<BackupJobOutput> {
-    let run_name = BackupRunName::new(datetime_now(), hostname(), username(), &cfg_backup.name);
-    let source_dir = cfg_backup.source_dir_path();
-    let dest_dir = config.backup_storage_dir_path()
-        .join(paths::BACKUP_FULL_DIRNAME)
-        .join(run_name.to_string());
-
-
-    let mut rsync_cmd = rsync::cmd_rsync_full(&source_dir, &dest_dir);
-    let output = rsync_cmd.output().unwrap();
-
-    if !output.status.success() {
-        return Err(Error::rsync(output));
-    }
-
-    todo!()
-}
-
-/// Performs an incremental backup. Returns the path to the backup directory created.
-pub(crate) fn backup_incremental(cfg_backup: &BackupConfigBackup, config: &BackupConfig) -> Result<BackupJobOutput> {
-    let source_dir = cfg_backup.source_dir_path();
-    let run_name = BackupRunName::new(datetime_now(), hostname(), username(), &cfg_backup.name);
-    let dest_dir = config.backup_storage_dir_path()
-        .join(paths::BACKUP_INCREMENTAL_DIRNAME)
-        .join(run_name.to_string());
-
-    let last_full_dir = find_last_backup(
-            BackupType::Full,
-            hostname(),
-            username(),
-            &cfg_backup.name,
-            &config.backup_storage_dir_path()
-        ).ok_or_else(|| Error::Generic("No full backup found".to_string()))?;
-
-
-    let mut rsync_cmd = rsync::cmd_rsync_incremental(&last_full_dir, &source_dir, &dest_dir);
-    let output = rsync_cmd.output().unwrap();
-
-    if !output.status.success() {
-        return Err(Error::Generic("TODO: RSYNC FAILED".to_string()));
-    }
-
-    todo!()
-}
+pub type JobResults = Result<Vec<JobOutput>>;
 
 /// Check to see if it's time to run a backup.
 pub(crate) fn backup_job_due(
@@ -215,12 +171,16 @@ impl JobTrait for BackupJob {
     type Output = BackupJobOutput;
 
     fn run(&self) -> Result<JobOutput> {
+        Log::get().info(&format!("Began {} backup of `{}`", self.backup_type, self.run_name.backup_name));
+
         let mut rsync_cmd = rsync::cmd_rsync_full(&self.source_dir, &self.dest_dir);
         let output = rsync_cmd.output().unwrap();
 
         if !output.status.success() {
             return Err(Error::rsync(output));
         }
+    
+        Log::get().info(&format!("Completed {} backup of `{}`", self.backup_type, self.run_name.backup_name));
 
         Ok(JobOutput::Backup(BackupJobOutput {
             backup_type: self.backup_type,
@@ -257,7 +217,7 @@ impl BackupJob {
             .join(format!("{}.tar.xz", run_name.to_string()));
         let archive_run_name = run_name.clone();
 
-        JobQueueEntry::Series(vec![
+        let mut series = vec![
             JobQueueEntry::Job {
                 job: Job::Backup(BackupJob {
                     backup_type,
@@ -267,8 +227,10 @@ impl BackupJob {
                     dest_dir, }),
                 status: JobStatus::Ready,
                 result: None
-            },
-            JobQueueEntry::Job {
+        }];
+
+        if backup_type == BackupType::Full {
+            series.push(JobQueueEntry::Job {
                 job: Job::Archive(ArchiveJob {
                     backup_run_name: archive_run_name,
                     source_dir: archive_source_dir,
@@ -276,18 +238,20 @@ impl BackupJob {
                 }),
                 status: JobStatus::Ready,
                 result: None
-            }
-        ])
+            });
+        }
+
+        JobQueueEntry::Series(series)
     }
 }
 
 #[derive(Debug)]
 pub struct BackupJobOutput {
-    pub(crate) backup_type: BackupType,
-    pub(crate) run_name: BackupRunName,
-    pub(crate) source_dir: PathBuf,
-    pub(crate) incremental_source_dir: Option<PathBuf>,
-    pub(crate) dest_dir: PathBuf,
+    pub backup_type: BackupType,
+    pub run_name: BackupRunName,
+    pub source_dir: PathBuf,
+    pub incremental_source_dir: Option<PathBuf>,
+    pub dest_dir: PathBuf,
 }
 
 impl JobOutputTrait for BackupJobOutput {}

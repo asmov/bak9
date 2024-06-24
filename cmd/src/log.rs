@@ -1,7 +1,7 @@
 use std::{fs, sync::OnceLock, io::Write};
 use chrono::Timelike;
 use colored::Colorize;
-use crate::{strings, config::*, schedule::*, paths, backup::*};
+use crate::{strings, config::*, schedule::*, paths, backup::*, cli::*};
 
 pub fn make_log_prefix(topic: &str, status: &str, color: colored::Color) -> String {
     let now = chrono::Local::now();
@@ -23,20 +23,22 @@ pub fn bak9_info_log_prefix() -> String {
 
 pub struct Log {
     path: Option<std::path::PathBuf>,
+    quiet: bool
 }
 
 static LOG: OnceLock<Log> = OnceLock::new();
 
 impl Log {
-    pub(crate) fn init(config: Option<&BackupConfig>) {
-        LOG.get_or_init(|| Log::new(config));
+    pub fn init(config: Option<&BackupConfig>, cli: Option<&Cli>) {
+        LOG.get_or_init(|| Log::new(config, cli));
     }
 
     pub(crate) fn get() -> &'static Log {
         LOG.get().unwrap()
     }
 
-    fn new(config: Option<&BackupConfig>) -> Self {
+    fn new(config: Option<&BackupConfig>, cli: Option<&Cli>) -> Self {
+        let quiet = cli.map_or(false, |c| c.quiet);
         if let Some(config) = config { 
             let filename = format!("{}__{}__{}.log", datetimestamp_now(), hostname(), username());
             let path = config.backup_storage_dir_path()
@@ -44,11 +46,11 @@ impl Log {
                 .join(filename);
 
             match std::fs::write(&path, "") {
-                Ok(_) => Self { path: Some(path.canonicalize().unwrap()) },
-                Err(_) => Self { path: None }
+                Ok(_) => Self { path: Some(path.canonicalize().unwrap()), quiet },
+                Err(_) => Self { path: None, quiet }
             }
         } else {
-            Self { path: None }
+            Self { path: None, quiet }
         }
     }
 
@@ -82,7 +84,7 @@ impl Log {
                     eprintln!("{} Unable to write to log file :: {}", bak9_error_log_prefix(), e);
                 }
             }
-        } else {
+        } else if !self.quiet {
             println!("{}", msg);
         }
     }

@@ -32,6 +32,7 @@ pub(crate) trait TestlibModuleBuilder {
 
 impl<'func> TestlibModuleBuilder for testing::ModuleBuilder<'func> {
     fn testlib_module_defaults(self) -> Self {
+        bak9::log::Log::init(None, None);
         self.import_fixture_dir(testlib_namepath())
             .base_temp_dir(env!("CARGO_TARGET_TMPDIR"))
     }

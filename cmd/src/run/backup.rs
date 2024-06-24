@@ -31,7 +31,7 @@ fn run_backup_scheduled(_cli: &Cli, config: &BackupConfig) -> JobResults {
 const ALL: &str = "all";
 
 fn run_backup_manual(
-    cli: &Cli,
+    _cli: &Cli,
     cmd: &ManualBackupCommand,
     config: &BackupConfig,
     backup_type: BackupType
@@ -46,30 +46,12 @@ fn run_backup_manual(
     
     let mut results = Vec::new();
     for cfg_backup in cfg_backups {
-        if !cli.quiet {
-            println!("{} Backing up {} ...", bak9_info_log_prefix(), cfg_backup.name.cyan());
-        }
-
-        let result = match backup_type {
-            BackupType::Full => {
-                backup_full(&cfg_backup, &config)?
-            },
-            BackupType::Incremental => {
-                backup_incremental(&cfg_backup, &config)?
-            }
-        };
-
-        if !cli.quiet {
-            println!("{} Backed up {} to {}",
-                bak9_info_log_prefix(),
-                cfg_backup.name.cyan(),
-                result.dest_dir.to_str().unwrap().cyan());
-        }
-
-        results.push(result);
+        let jobs = vec![BackupJob::plan(backup_type, &cfg_backup, &config)];
+        let job_results = run_jobs(jobs, config)?;
+        results.extend(job_results);
     }
 
-    todo!()
+    Ok(results)
 }
 
 /// Verify that the runtime environment that has been configured is valid.  

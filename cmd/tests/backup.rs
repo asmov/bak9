@@ -5,7 +5,7 @@ mod tests {
     use std::{fs, vec};
     use std::os::unix::fs::PermissionsExt;
     use asmov_testing::{self as testing, prelude::*};
-    use bak9::{config::BackupConfigSchedule, paths};
+    use bak9::{config::BackupConfigSchedule, paths, job::*};
     use super::testlib::{self, TestlibModuleBuilder};
 
     static TESTING: testing::StaticModule = testing::module(|| {
@@ -93,15 +93,15 @@ mod tests {
         let cli = make_cli(&test);
         let config = make_config(&test, 1);
 
-        let results = bak9_backup(&cli, &config).unwrap();
-        assert_eq!(1, results.len());
-        let result = results.get(0).unwrap();
-        assert!(matches!(result, bak9::backup::BackupJobOutput::Full(..)));
-        let result = match result {
-            bak9::backup::BackupJobOutput::Full(result) => result,
-            _ => panic!("unexpected result"),
-        };
-        assert_eq!(false, dir_diff::is_different(&result.source_dir, &result.dest_dir.join(testlib::TESTUSR)).unwrap());
+        let mut results = bak9_backup(&cli, &config).unwrap();
+        assert_eq!(2, results.len());
+        let archive_output = match results.pop().unwrap() {
+            JobOutput::Archive(job) => job, _ => panic!() };
+        let backup_output = match results.pop().unwrap() {
+            JobOutput::Backup(job) => job, _ => panic!() };
+        assert_eq!(false, dir_diff::is_different(
+            &backup_output.source_dir,
+            &backup_output.dest_dir.join(testlib::TESTUSR)).unwrap());
 
         // try running it again. it should not create a new backup for "today"
         let results = bak9_backup(&cli, &config).unwrap();
@@ -113,13 +113,11 @@ mod tests {
 
         let cli = make_cli(test);
         let config = make_config(test, 1);
-        let results = bak9_backup(&cli, &config).unwrap();
-        assert_eq!(1, results.len());
-        let result = results.get(0).unwrap();
-        let result = match result {
-            bak9::backup::BackupJobOutput::Full(result) => result,
-            _ => panic!("unexpected result"),
-        };
+        let mut results = bak9_backup(&cli, &config).unwrap();
+        assert_eq!(2, results.len());
+        results.pop().unwrap();
+        let backup_output = match results.pop().unwrap() {
+            JobOutput::Backup(job) => job, _ => panic!() };
 
         let yesterday_run_name = bak9::backup::BackupRunName::new(
             chrono::Local::now().checked_sub_signed(chrono::Duration::days(1)).unwrap(),
@@ -132,7 +130,7 @@ mod tests {
             .join(paths::BACKUP_FULL_DIRNAME)
             .join(yesterday_run_name.to_string());
 
-        fs::rename(&result.dest_dir, yesterday_backup_run_dir).unwrap();
+        fs::rename(&backup_output.dest_dir, yesterday_backup_run_dir).unwrap();
     }
 
     #[named]
@@ -146,18 +144,14 @@ mod tests {
         let cli = make_cli(&test);
         let config = make_config(&test, 2);
 
-        let results = bak9_backup(&cli, &config).unwrap();
+        let mut results = bak9_backup(&cli, &config).unwrap();
         assert_eq!(1, results.len());
-        let result = results.get(0).unwrap();
-        assert!(matches!(result, bak9::backup::BackupJobOutput::Incremental(..)));
-        let result = match result {
-            bak9::backup::BackupJobOutput::Incremental(result) => result,
-            _ => panic!("unexpected result"),
-        };
-
-        let dest_home_dir = result.dest_dir.join(testlib::TESTUSR);
-        assert!(!dir_diff::is_different(&result.source_dir, &dest_home_dir).unwrap());
-        assert!(dir_diff::is_different(&result.dest_dir, &dest_home_dir).unwrap());
+        let backup_output = match results.pop().unwrap() {
+            JobOutput::Backup(job) => job, _ => panic!() };
+ 
+        let dest_home_dir = backup_output.dest_dir.join(testlib::TESTUSR);
+        assert!(!dir_diff::is_different(&backup_output.source_dir, &dest_home_dir).unwrap());
+        assert!(dir_diff::is_different(&backup_output.dest_dir, &dest_home_dir).unwrap());
         assert!(dest_home_dir.join("source-2.txt").exists(),
             "New file: source-2.txt");
         assert_eq!("source-2 delta", fs::read_to_string(dest_home_dir.join("delta.txt")).unwrap(),

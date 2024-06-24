@@ -27,6 +27,9 @@ pub enum Error {
     #[error("Failed to {}: {cause}", "rsync".yellow())]
     RsyncError { cause: String },
 
+    #[error("Failed to {}: {cause}", "tar xz".yellow())]
+    TarXZError { cause: String },
+
     #[error("{0}")]
     Generic(String)
 }
@@ -62,6 +65,12 @@ impl Error {
 
     pub fn rsync(output: std::process::Output) -> Self {
         Self::RsyncError {
+            cause: String::from_utf8(output.stderr).unwrap()
+        }
+    }
+
+    pub fn tar_xz(output: std::process::Output) -> Self {
+        Self::TarXZError {
             cause: String::from_utf8(output.stderr).unwrap()
         }
     }
