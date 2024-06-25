@@ -2,7 +2,7 @@
 //! [JobPlan]. When it is time to task the job out, the [JobPlan] is used to create a [JobInput], which finalizes exactly what
 //! the Job will do.
 
-use crate::{backup::*, config::*, error::*, paths::BACKUP_ARCHIVE_DIRNAME};
+use crate::{backup::*, config::*, error::*};
 
 #[derive(strum::Display, Debug)]
 #[strum(serialize_all = "snake_case")]

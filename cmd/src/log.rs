@@ -21,6 +21,51 @@ pub fn bak9_info_log_prefix() -> String {
     make_log_prefix(strings::BAK9, "", colored::Color::Green)
 }
 
+pub trait TikColor {
+    fn tik_color(&self, color: colored::Color) -> String;
+
+    fn tik_name(&self) -> String {
+        self.tik_color(colored::Color::BrightCyan)
+    }
+
+    fn tik_path(&self) -> String {
+        self.tik_color(colored::Color::Cyan)
+    }
+
+    fn strip_tik(&self) -> String;
+
+    fn strip_color(&self) -> String;
+}
+
+impl TikColor for &str {
+    fn tik_color(&self, color: colored::Color) -> String {
+        format!("``{}``", self.color(color))
+    }
+
+    fn strip_tik(&self) -> String {
+        self.replace("``", "")
+    }
+
+    fn strip_color(&self) -> String {
+        strip_ansi_escapes::strip_str(self)
+            .replace("``", "`")
+    }
+}
+
+impl TikColor for String {
+    fn tik_color(&self, color: colored::Color) -> String {
+        self.as_str().tik_color(color)
+    }
+
+    fn strip_tik(&self) -> String {
+        self.as_str().strip_tik()
+    }
+
+    fn strip_color(&self) -> String {
+        self.as_str().strip_color()
+    }
+}
+
 pub struct Log {
     path: Option<std::path::PathBuf>,
     quiet: bool
@@ -38,7 +83,14 @@ impl Log {
     }
 
     fn new(config: Option<&BackupConfig>, cli: Option<&Cli>) -> Self {
-        let quiet = cli.map_or(false, |c| c.quiet);
+        let quiet = match cli {
+            Some(cli) => match cli.subcommand {
+                Command::Backup(BackupCommand::Scheduled) => true,
+                _ => cli.quiet
+            },
+            None => false
+        };
+
         if let Some(config) = config { 
             let filename = format!("{}__{}__{}.log", datetimestamp_now(), hostname(), username());
             let path = config.backup_storage_dir_path()
@@ -74,18 +126,26 @@ impl Log {
 
             match file {
                 Ok(mut file) => {
-                    if let Err(e) = writeln!(file,  "{}", strip_ansi_escapes::strip_str(msg)) {
-                        println!("{}", msg);
+                    if let Err(e) = writeln!(file,  "{}", msg.strip_color()) {
+                        if !self.quiet {
+                            println!("{}", msg.strip_tik());
+                        }
+
                         eprintln!("{} Unable to write to log file :: {}", bak9_error_log_prefix(), e);
                     }
                 },
                 Err(e) => {
-                    println!("{}", msg);
-                    eprintln!("{} Unable to write to log file :: {}", bak9_error_log_prefix(), e);
+                    if !self.quiet {
+                        println!("{}", msg.strip_tik());
+                    }
+
+                    eprintln!("{} Unable to write to log file :: {}", bak9_error_log_prefix(), e.to_string().strip_tik());
                 }
             }
-        } else if !self.quiet {
-            println!("{}", msg);
+        }
+        
+        if !self.quiet {
+            println!("{}", msg.strip_tik());
         }
     }
 }

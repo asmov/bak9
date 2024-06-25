@@ -1,7 +1,7 @@
 use std::{fmt::Display, fs, path::{Path, PathBuf}, str::FromStr, sync::OnceLock};
 use chrono;
 use strum;
-use crate::{archive::*, log::*, cmd::rsync, config::*, error::*, job::*, paths, run::backup, schedule::*};
+use crate::{archive::*, log::*, cmd::rsync, config::*, error::*, job::*, paths, schedule::*};
         
 pub fn hostname() -> &'static str {
     static HOSTNAME: OnceLock<String> = OnceLock::new();
@@ -171,7 +171,7 @@ impl JobTrait for BackupJob {
     type Output = BackupJobOutput;
 
     fn run(&self) -> Result<JobOutput> {
-        Log::get().info(&format!("Began {} backup of `{}`", self.backup_type, self.run_name.backup_name));
+        Log::get().info(&format!("Began {} backup of {}", self.backup_type, self.run_name.backup_name.tik_name()));
 
         let mut rsync_cmd = rsync::cmd_rsync_full(&self.source_dir, &self.dest_dir);
         let output = rsync_cmd.output().unwrap();
@@ -180,7 +180,8 @@ impl JobTrait for BackupJob {
             return Err(Error::rsync(output));
         }
     
-        Log::get().info(&format!("Completed {} backup of `{}`", self.backup_type, self.run_name.backup_name));
+        Log::get().info(&format!("Completed {} backup of {} to {}",
+            self.backup_type, self.run_name.backup_name.tik_name(), self.dest_dir.to_str().unwrap().tik_path()));
 
         Ok(JobOutput::Backup(BackupJobOutput {
             backup_type: self.backup_type,

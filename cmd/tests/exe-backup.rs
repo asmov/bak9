@@ -48,7 +48,7 @@ mod tests {
 
     /// Returns the (name, dest_dir) of each successful backup.
     fn parse_stdout_backup_results<'stdout>(stdout: &'stdout str) -> Vec<(&'stdout str, PathBuf)> {
-        const RE: &str = r"(?m)bak9] Backed up ([^ ]+) to (.+)$";
+        const RE: &str = r"(?m)bak9] Completed (?:full|incremental) backup of ([^ ]+) to (.+)$";
         static REGEX: OnceLock<regex::Regex> = OnceLock::new();
         let regex = REGEX.get_or_init(|| regex::Regex::new(RE).unwrap());
 

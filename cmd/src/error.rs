@@ -6,6 +6,9 @@ pub enum Error {
     #[error("Config file error: {path} :: {cause}")]
     ConfigFile { path: String, cause: String },
 
+    #[error("Config parsing error :: {cause}")]
+    ConfigParse { cause: String },
+
     #[error("Config file {} not found. Have you ran {} yet?", path.cyan(), "bak9 config".yellow())]
     DefaultConfigFileNotFound { path: String },
 

@@ -5,7 +5,7 @@ mod tests {
     use std::{fs, vec};
     use std::os::unix::fs::PermissionsExt;
     use asmov_testing::{self as testing, prelude::*};
-    use bak9::{config::BackupConfigSchedule, paths, job::*};
+    use bak9::{paths, job::*};
     use super::testlib::{self, TestlibModuleBuilder};
 
     static TESTING: testing::StaticModule = testing::module(|| {
@@ -32,35 +32,9 @@ mod tests {
         bak9::config::BackupConfig {
             backup_storage_dir: test.temp_dir().join("strg/backup")
                 .to_str().unwrap().to_string(),
-            schedules: vec![
-                BackupConfigSchedule {
-                    name: "daily".to_string(),
-                    minute: Some(0),
-                    minutes: None,
-                    hour: Some(0),
-                    hours: None,
-                    day_of_week: None,
-                    days_of_week: None,
-                    day_of_month: None,
-                    days_of_month: None,
-                    month: None,
-                    months: None
-                },
-                BackupConfigSchedule {
-                    name: "monthly".to_string(),
-                    minute: Some(0),
-                    minutes: None,
-                    hour: Some(0),
-                    hours: None,
-                    day_of_week: None,
-                    days_of_week: None,
-                    day_of_month: Some(1),
-                    days_of_month: None,
-                    month: None,
-                    months: None
-                },
-
-            ],
+            schedules: vec![],
+            remotes: vec![],
+            remote_groups: vec![],
             backups: vec![
                 bak9::config::BackupConfigBackup {
                     name: "home".to_string(),
@@ -73,6 +47,7 @@ mod tests {
                     incremental_schedule: "daily".to_string(),
                     max_full: 4,
                     archives: vec![], 
+                    syncs: vec![],
                 },
             ],
         }
@@ -102,6 +77,7 @@ mod tests {
         assert_eq!(false, dir_diff::is_different(
             &backup_output.source_dir,
             &backup_output.dest_dir.join(testlib::TESTUSR)).unwrap());
+        assert_eq!(true, archive_output.dest_filepath.exists());
 
         // try running it again. it should not create a new backup for "today"
         let results = bak9_backup(&cli, &config).unwrap();

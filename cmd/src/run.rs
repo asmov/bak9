@@ -9,6 +9,7 @@ use crate::{error::*, cli::*, config::*, log::*, run};
 
 pub fn run_main() -> process::ExitCode {
     let cli = Cli::parse();
+
     if let Ok(config) = read_cli_config(&cli) {
         Log::init(Some(&config), Some(&cli));
         match run_with_config(cli, config) {

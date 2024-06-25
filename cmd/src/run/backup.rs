@@ -1,4 +1,3 @@
-use colored::Colorize;
 use crate::{backup::*, cli::*, config::*, log::*, paths, error::*, job::*};
 
 pub fn run_backup(cli: &Cli, subcmd: &BackupCommand, config: Option<&BackupConfig>) -> JobResults {

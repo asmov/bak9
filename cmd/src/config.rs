@@ -1,6 +1,6 @@
-use std::{fs, path::{PathBuf, Path}};
+use std::{fs, path::{Path, PathBuf}, str::FromStr};
 use validator::{Validate, ValidationError};
-use crate::{Error, Result, cli::*, paths};
+use crate::{cli::*, paths, Error, Result};
 
 pub const CFG_BACKUP_STORAGE_DIR: &'static str = "backup_storage_dir";
 
@@ -56,15 +56,40 @@ pub fn read_config(config_path: Option<&Path>) -> Result<BackupConfig> {
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, validator::Validate)]
+#[validate(schema(function = "BackupConfig::validate_schema"))]
 #[validate]
 pub struct BackupConfig {
     pub backup_storage_dir: String,
-    #[serde(alias = "schedule")]
+
+    #[serde(alias = "schedule", default = "Vec::new")]
     #[validate(nested)]
     pub schedules: Vec<BackupConfigSchedule>,
+
     #[serde(alias = "backup")]
     #[validate(nested)]
     pub backups: Vec<BackupConfigBackup>,
+
+    #[serde(alias = "remote", default = "Vec::new")]
+    #[validate(nested)]
+    pub remotes: Vec<BackupConfigRemote>,
+
+    #[serde(alias = "remote_group", default = "Vec::new")]
+    #[validate(nested)]
+    pub remote_groups: Vec<BackupConfigRemoteGroup>,
+}
+
+impl FromStr for BackupConfig {
+    type Err = Error;
+
+    fn from_str(config_content: &str) -> Result<Self> {
+        let config: Self = toml::from_str(config_content)
+            .map_err(|e| Error::ConfigParse { cause: e.to_string() })?;
+
+        config.validate()
+            .map_err(|e| Error::ConfigParse { cause: e.to_string() })?;
+
+        Ok(config)
+    }
 }
 
 impl BackupConfig {
@@ -92,15 +117,33 @@ impl BackupConfig {
     }
 
     pub fn schedule<'cfg>(&'cfg self, schedule_name: &str) -> Result<&'cfg BackupConfigSchedule> {
-        self.schedules.iter()
+        if let Some(schedule) = self.schedules.iter().find(|s| s.name == schedule_name) {
+            return Ok(schedule);
+        }
+
+        DEFAULT_SCHEDULES.iter()
             .find(|s| s.name == schedule_name)
-            .ok_or_else(|| Error::ConfigReferenceNotFound { schema: "[schedule]", name: schedule_name.to_string() })
+           .ok_or_else(|| Error::ConfigReferenceNotFound { schema: "[schedule]", name: schedule_name.to_string() })
     }
 
     pub fn backup<'cfg>(&'cfg self, backup_name: &str) -> Result<&'cfg BackupConfigBackup> {
         self.backups.iter()
             .find(|b| b.name == backup_name)
             .ok_or_else(|| Error::ConfigReferenceNotFound { schema: "[backup]", name: backup_name.to_string() })
+    }
+
+    pub fn validate_schema(&self) -> std::result::Result<(), validator::ValidationError> {
+        // ensure that all remote groups are referencing existing remotes
+        for remote_group in &self.remote_groups {
+            for group_remote_ref in &remote_group.remotes {
+                self.remotes.iter()
+                    .find(|r| &r.name == group_remote_ref)
+                    .ok_or_else(|| ValidationError::new("").with_message(format!(
+                        "remote_group['{}'].remote['{group_remote_ref}']: Unknown remote `{group_remote_ref}`",
+                        remote_group.name).into()))?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -256,8 +299,11 @@ pub struct BackupConfigBackup {
 
     #[serde(alias = "archive")]
     #[validate(nested)]
-    pub archives: Vec<BackupConfigArchive>
+    pub archives: Vec<BackupConfigArchive>,
 
+    #[serde(alias = "sync", default = "Vec::new")]
+    #[validate(nested)]
+    pub syncs: Vec<BackupConfigSync>
 }
 
 impl BackupConfigBackup {
@@ -281,7 +327,114 @@ pub struct BackupConfigArchive {
     pub max_archives: u32,
 }
 
-pub const CONFIG_DEFAULTS: &'static str = r#"backup_storage_dir = "/storage/backup"
+#[derive(Debug, serde::Serialize, serde::Deserialize, validator::Validate)]
+pub struct BackupConfigRemote {
+    pub name: String,
+    pub host: String,
+    pub user: Option<String>,
+    pub backup_storage_dir: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, validator::Validate)]
+pub struct BackupConfigRemoteGroup {
+    pub name: String,
+    pub remotes: Vec<String>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, validator::Validate)]
+#[validate(schema(function = "BackupConfigSync::validate_schema"))]
+pub struct BackupConfigSync {
+    pub remote: Option<String>,
+    pub remote_group: Option<String>,
+    pub sync_full: bool,
+    pub sync_incremental: bool,
+    pub sync_archive: bool,
+}
+
+impl BackupConfigSync {
+    fn validate_schema(&self) -> std::result::Result<(), validator::ValidationError> {
+        if self.remote.is_none() && self.remote_group.is_none() {
+            Err(ValidationError::new("either `remote` or `remote_group` must be set"))
+        } else if self.remote.is_some() && self.remote_group.is_some() {
+            Err(ValidationError::new("`remote` and `remote_group` are mutually exclusive"))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+lazy_static::lazy_static!{
+    static ref DEFAULT_SCHEDULES: Vec<BackupConfigSchedule> = vec![
+        BackupConfigSchedule {
+            name: "daily".to_string(),
+            minute: Some(0),
+            minutes: None,
+            hour: Some(0),
+            hours: None,
+            day_of_week: None,
+            days_of_week: None,
+            day_of_month: None,
+            days_of_month: None,
+            month: None,
+            months: None,
+        },
+        BackupConfigSchedule {
+            name: "weekly".to_string(),
+            minute: Some(0),
+            minutes: None,
+            hour: Some(0),
+            hours: None,
+            day_of_week: Some(DayOfWeek::Sunday),
+            days_of_week: None,
+            day_of_month: None,
+            days_of_month: None,
+            month: None,
+            months: None,
+        },
+        BackupConfigSchedule {
+            name: "monthly".to_string(),
+            minute: Some(0),
+            minutes: None,
+            hour: Some(0),
+            hours: None,
+            day_of_week: None,
+            days_of_week: None,
+            day_of_month: Some(1),
+            days_of_month: None,
+            month: None,
+            months: None,
+        },
+        BackupConfigSchedule {
+            name: "quarterly".to_string(),
+            minute: Some(0),
+            minutes: None,
+            hour: Some(0),
+            hours: None,
+            day_of_week: None,
+            days_of_week: None,
+            day_of_month: Some(1),
+            days_of_month: None,
+            month: None,
+            months: Some(vec![1, 4, 7, 10]),
+        },
+        BackupConfigSchedule {
+            name: "annual".to_string(),
+            minute: Some(0),
+            minutes: None,
+            hour: Some(0),
+            hours: None,
+            day_of_week: None,
+            days_of_week: None,
+            day_of_month: Some(1),
+            days_of_month: None,
+            month: Some(1),
+            months: None,
+        }
+    ];
+}
+
+pub const CONFIG_DEFAULTS: &'static str =
+r#"backup_storage_dir = "/storage/backup"
 
 [[backup]]
 name = "home"
@@ -297,72 +450,150 @@ max_archives = 5
 [[backup.archive]]
 schedule = "annual"
 max_archives = 4
-
-[[backup.sync]]
-remote_group = "roam"
-sync_full = true
-sync_incremental = true
-sync_archive = true
-
-[[backup.sync]]
-remote = "cloud"
-sync_full = true
-sync_incremental = true
-sync_archive = true
-
-[[remote]]
-name = "laptop1"
-host = "laptop1.local"
-backup_storage_dir = "/storage/backup"
-
-[[remote]]
-name = "desktop1"
-host = "desktop.local"
-backup_storage_dir = "/storage/backup"
-
-[[remote]]
-name = "cloud"
-host = "cloud.local"
-user = "backup"
-backup_storage_dir = "/home/$REMOTE_USER/backup"
-
-[[remote_group]]
-type = "roaming"
-name = "roam"
-remotes = [
-    "laptop1"
-    "desktop1"
-]
-
-[[schedule]]
-name = "daily"
-minute = 0
-hour = 0
-
-[[schedule]]
-name = "weekly"
-minute = 0
-hour = 0
-day_of_week = "sun"
-
-[[schedule]]
-name = "monthly"
-minute = 0
-hour = 0
-day_of_month = 1
-
-[[schedule]]
-name = "quarterly"
-minute = 0
-hour = 0
-day_of_month = 1
-months = [1, 4, 7, 10]
-
-[[schedule]]
-name = "annual"
-minute = 0
-hour = 0
-day_of_month = 1
-month = 1
 "#;
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn append_cfgs(cfgs: &[&str]) -> String {
+        let mut config = CONFIG_DEFAULTS.to_string();
+        for cfg in cfgs {
+            config.push_str(cfg);
+        }
+
+        config
+    }
+
+    fn append_cfg(cfg: &str) -> String {
+        format!("{}{}", CONFIG_DEFAULTS, cfg)
+    }
+
+    #[test]
+    fn test_parse_default_config() {
+        let config = BackupConfig::from_str(CONFIG_DEFAULTS).unwrap();
+        assert_eq!("/storage/backup", config.backup_storage_dir);
+        assert_eq!(0, config.schedules.len());
+        assert_eq!(1, config.backups.len());
+    }
+
+    #[test]
+    fn test_parse_sample_config() {
+        let config = BackupConfig::from_str(CONFIG_SAMPLE).unwrap();
+        assert_eq!(config.backup_storage_dir, "/storage/backup");
+        assert_eq!("/storage/backup", config.backup_storage_dir);
+        assert_eq!(0, config.schedules.len());
+        assert_eq!(1, config.backups.len());
+        assert_eq!(3, config.remotes.len());
+        assert_eq!(1, config.remote_groups.len());
+        assert_eq!(2, config.backups[0].syncs.len());
+        assert_eq!("desktop1", config.remotes[1].name);
+        assert_eq!("roam", config.remote_groups[0].name);
+        assert_eq!(config.remotes[1].name, config.remote_groups[0].remotes[1]);
+        assert_eq!(config.backups[0].syncs[0].remote_group, Some(config.remote_groups[0].name.to_string()));
+    }
+
+    #[test]
+    fn test_default_schedule() {
+        let config = BackupConfig::from_str(CONFIG_DEFAULTS).unwrap();
+        assert_eq!("monthly", config.schedule("monthly").unwrap().name);
+        assert_eq!(1, config.schedule("monthly").unwrap().day_of_month.unwrap());
+
+        // override "monthly"
+        let config = BackupConfig::from_str(&append_cfg(
+            r#"[[schedule]]
+            name = "monthly"
+            minute = 0
+            hour = 0
+            day_of_month = 2
+            "#)).unwrap();
+        assert_eq!("monthly", config.schedule("monthly").unwrap().name);
+        assert_eq!(2, config.schedule("monthly").unwrap().day_of_month.unwrap());
+    }
+
+    const CFG_SAMPLE_REMOTES: &'static str = 
+        r#"[[remote]]
+        name = "laptop1"
+        host = "laptop1.local"
+        backup_storage_dir = "/storage/backup"
+
+        [[remote]]
+        name = "desktop1"
+        host = "desktop.local"
+        backup_storage_dir = "/storage/backup"
+
+        [[remote]]
+        name = "cloud"
+        host = "cloud.local"
+        user = "backup"
+        backup_storage_dir = "/home/$REMOTE_USER/backup"
+        "#;
+
+    #[test]
+    fn test_parse_config_errors() {
+        let config = append_cfgs(&[CFG_SAMPLE_REMOTES,
+            r#"[[remote_group]]
+            name = "bad"
+            remotes = [
+                "fail",
+                "desktop1"
+            ]
+            "#]);
+        assert_eq!(&BackupConfig::from_str(&config).unwrap_err().to_string(),
+            "Config parsing error :: __all__: remote_group['bad'].remote['fail']: Unknown remote `fail`");
+    }
+
+    const CONFIG_SAMPLE: &'static str =
+        r#"backup_storage_dir = "/storage/backup"
+
+        [[backup]]
+        name = "home"
+        source_dir = "$HOME"
+        full_schedule = "monthly"
+        incremental_schedule = "daily"
+        max_full = 4
+
+        [[backup.archive]]
+        schedule = "quarterly"
+        max_archives = 5
+
+        [[backup.archive]]
+        schedule = "annual"
+        max_archives = 4
+
+        [[backup.sync]]
+        remote_group = "roam"
+        sync_full = true
+        sync_incremental = true
+        sync_archive = true
+
+        [[backup.sync]]
+        remote = "cloud"
+        sync_full = true
+        sync_incremental = true
+        sync_archive = true
+
+        [[remote]]
+        name = "laptop1"
+        host = "laptop1.local"
+        backup_storage_dir = "/storage/backup"
+
+        [[remote]]
+        name = "desktop1"
+        host = "desktop.local"
+        backup_storage_dir = "/storage/backup"
+
+        [[remote]]
+        name = "cloud"
+        host = "cloud.local"
+        user = "backup"
+        backup_storage_dir = "/home/$REMOTE_USER/backup"
+
+        [[remote_group]]
+        name = "roam"
+        remotes = [
+            "laptop1",
+            "desktop1"
+        ]
+        "#;
+}
