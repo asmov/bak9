@@ -1,6 +1,6 @@
 bak9
 ================================================================================
-**Keep your $HOME safe:**  
+*Keep your $HOME safe*  
 
 The bak9 suite provides a rotational backup system for workstation users.  
 
@@ -14,9 +14,9 @@ The bak9 suite provides a rotational backup system for workstation users.
 
 ### Usage
 
-`bak [OPTIONS] FILE [DIR] [COMMAND]`
+`bak9 [OPTIONS] <COMMAND>`
 
-Creates a backup `.bak` copy of **FILE**.
+Manages a rotational backup system.
 
 Refer to the [bak9 project](./cli/) for more information.
 
@@ -31,7 +31,7 @@ Refer to the [bak9 project](./cli/) for more information.
 
 `bak [OPTIONS] FILE [DIR] [COMMAND]`
 
-Creates a backup `.bak` copy of **FILE**.
+Creates an adhoc backup `.bak` copy of **FILE**.
 
 Refer to the [bak project](./cli/) for more information.
 

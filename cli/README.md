@@ -7,11 +7,11 @@ bak9
 
 *Keep your $HOME safe*  
 
-Bak9 is rotational backup system for workstation users.  
-
 ## Usage
 
 `bak9 [OPTIONS] <COMMAND>`
+
+Manages a rotational backup system.
 
 ### Commands
 - `backup`   Performs backups as configured
