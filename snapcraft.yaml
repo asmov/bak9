@@ -1,6 +1,6 @@
 name: bak9
 version: git
-summary: Keep your $HOME safe - A rotational backup system for workstation users
+summary: Rotational backup system for workstation users
 description: |
   bak [OPTIONS] FILE [DIR] [COMMAND]
 
@@ -45,3 +45,5 @@ parts:
 apps:
   bak:
     command: bin/bak
+  bak9:
+    command: bin/bak9
