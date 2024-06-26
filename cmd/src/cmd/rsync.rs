@@ -49,12 +49,17 @@ pub fn cmd_rsync_incremental(incremental_source_dir: &Path, source_dir: &Path, d
 pub fn cmd_rsync_incremental_ssh(
     source_dir: &Path,
     host: &str,
-    remote_user: &str,
-    remote_incremental_source_dir: &str,
-    remote_dest_dir: &str
+    remote_user: Option<&str>,
+    remote_incremental_source_dir: &Path,
+    remote_dest_dir: &Path
 ) -> std::process::Command {
-    let remote_incremental_source = format!("{remote_user}@{host}/{remote_incremental_source_dir}/");
-    let remote_dest = format!("{remote_user}@{host}/{remote_dest_dir}");
+    let user_str = match remote_user {
+        Some(user) => format!("{}@", user),
+        None => String::new(),
+    };
+
+    let remote_incremental_source = format!("{user_str}{host}:{}/", remote_incremental_source_dir.to_str().unwrap());
+    let remote_dest = format!("{user_str}{host}:{}", remote_dest_dir.to_str().unwrap());
 
     let mut cmd = std::process::Command::new(RSYNC_CMD);
     cmd.args(&[

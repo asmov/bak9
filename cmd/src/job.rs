@@ -9,8 +9,8 @@ use crate::{backup::*, config::*, error::*};
 pub enum Job {
     Backup(crate::backup::BackupJob),
     Archive(crate::archive::ArchiveJob),
-    SyncBackup,
-    SyncArchive,
+    SyncBackup(crate::sync::SyncBackupJob),
+    SyncArchive(crate::sync::SyncArchiveJob),
 }
 
 impl Job {
@@ -18,8 +18,8 @@ impl Job {
         match self {
             Job::Backup(job) => job.run(),
             Job::Archive(job) => job.run(),
-            Job::SyncBackup => todo!(),
-            Job::SyncArchive => todo!(),
+            Job::SyncBackup(job) => job.run(),
+            Job::SyncArchive(job) => job.run(),
         }
     }
 
@@ -27,8 +27,8 @@ impl Job {
         match self {
             Job::Backup(job) => job.break_on_error(),
             Job::Archive(job) => job.break_on_error(),
-            Job::SyncBackup => true,
-            Job::SyncArchive => true,
+            Job::SyncBackup(job) => job.break_on_error(),
+            Job::SyncArchive(job) => job.break_on_error(),
         }
     }
 }
@@ -36,8 +36,8 @@ impl Job {
 pub enum JobOutput {
     Backup(crate::backup::BackupJobOutput),
     Archive(crate::archive::ArchiveJobOutput),
-    SyncBackup,
-    SyncArchive,
+    SyncBackup(crate::sync::SyncBackupJobOutput),
+    SyncArchive(crate::sync::SyncArchiveJobOutput),
 }
 
 pub type JobQueue = Vec<JobQueueEntry>;

@@ -45,7 +45,7 @@ fn run_backup_manual(
     
     let mut results = Vec::new();
     for cfg_backup in cfg_backups {
-        let jobs = vec![BackupJob::plan(backup_type, &cfg_backup, &config)];
+        let jobs = vec![BackupJob::plan(backup_type, &cfg_backup, &config)?];
         let job_results = run_jobs(jobs, config)?;
         results.extend(job_results);
     }

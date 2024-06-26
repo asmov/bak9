@@ -116,6 +116,18 @@ impl BackupConfig {
         paths::expand_path(&self.backup_storage_dir)
     }
 
+    pub fn remote<'cfg>(&'cfg self, name: &str) -> Result<&'cfg BackupConfigRemote> {
+        self.remotes.iter()
+            .find(|r| r.name == name)
+            .ok_or_else(|| Error::ConfigReferenceNotFound { schema: "[remote]", name: name.to_string() })
+    }
+
+    pub fn remote_group<'cfg>(&'cfg self, name: &str) -> Result<&'cfg BackupConfigRemoteGroup> {
+        self.remote_groups.iter()
+            .find(|r| r.name == name)
+            .ok_or_else(|| Error::ConfigReferenceNotFound { schema: "[remote_group]", name: name.to_string() })
+    }
+
     pub fn schedule<'cfg>(&'cfg self, schedule_name: &str) -> Result<&'cfg BackupConfigSchedule> {
         if let Some(schedule) = self.schedules.iter().find(|s| s.name == schedule_name) {
             return Ok(schedule);
@@ -352,6 +364,20 @@ pub struct BackupConfigSync {
 }
 
 impl BackupConfigSync {
+    pub fn remotes<'cfg>(&self, config: &'cfg BackupConfig) -> Vec<&'cfg BackupConfigRemote> {
+        if let Some(remote) = &self.remote {
+            vec![config.remote(remote).unwrap()]
+        } else if let Some(remote_group) = &self.remote_group {
+            config.remote_group(remote_group).unwrap().remotes.iter()
+                .map(|group_name| config.remote_group(group_name).unwrap())
+                .flat_map(|group| &group.remotes)
+                .map(|remote_name| config.remote(remote_name).unwrap())
+                .collect()
+        } else {
+            unreachable!()
+        }
+    }
+
     fn validate_schema(&self) -> std::result::Result<(), validator::ValidationError> {
         if self.remote.is_none() && self.remote_group.is_none() {
             Err(ValidationError::new("either `remote` or `remote_group` must be set"))

@@ -18,7 +18,7 @@ impl JobTrait for ArchiveJob {
     type Output = ArchiveJobOutput;
 
     fn run(&self) -> Result<JobOutput> {
-        Log::get().info(&format!("Began archiving {}", self.backup_run_name.backup_name.tik_name()));
+        log_info!("Began archiving {}", self.backup_run_name.backup_name.tik_name());
 
         let mut tar_xz_cmd = xz::cmd_tar_xz(&self.source_dir, &self.dest_filepath);
         let output = tar_xz_cmd.output().unwrap();
@@ -27,8 +27,8 @@ impl JobTrait for ArchiveJob {
             return Err(Error::rsync(output));
         }
     
-        Log::get().info(&format!("Completed archiving {} to {}",
-            self.backup_run_name.backup_name.tik_name(), self.dest_filepath.to_str().unwrap().tik_path()));
+        log_info!("Completed archiving {} to {}",
+            self.backup_run_name.backup_name.tik_name(), self.dest_filepath.to_str().unwrap().tik_path());
 
         Ok(JobOutput::Archive(ArchiveJobOutput {
             backup_run_name: self.backup_run_name.clone(),

@@ -1,7 +1,7 @@
 use std::{fmt::Display, fs, path::{Path, PathBuf}, str::FromStr, sync::OnceLock};
 use chrono;
 use strum;
-use crate::{archive::*, log::*, cmd::rsync, config::*, error::*, job::*, paths, schedule::*};
+use crate::{archive::*, cmd::rsync, config::*, error::*, job::*, log::*, paths, schedule::*, sync::*};
         
 pub fn hostname() -> &'static str {
     static HOSTNAME: OnceLock<String> = OnceLock::new();
@@ -118,7 +118,7 @@ pub(crate) fn backup_job_due(
 
     let last_full_backup = match last_full_backup {
         Some(path) => path,
-        None => return Ok(Some(BackupJob::plan(BackupType::Full, &cfg_backup, config)))
+        None => return Ok(Some(BackupJob::plan(BackupType::Full, &cfg_backup, config)?))
     };
 
     let last_full_dirname = last_full_backup.file_name().unwrap().to_str().unwrap();
@@ -129,7 +129,7 @@ pub(crate) fn backup_job_due(
         .unwrap();
 
     if next_full_datetime <= chrono::Local::now() {
-        return Ok(Some(BackupJob::plan(BackupType::Full, &cfg_backup, config)));
+        return Ok(Some(BackupJob::plan(BackupType::Full, &cfg_backup, config)?));
     }
 
     let last_incremental = find_last_backup(
@@ -152,7 +152,7 @@ pub(crate) fn backup_job_due(
         .unwrap();
 
     if next_incremental_datetime <= chrono::Local::now() {
-        Ok(Some(BackupJob::plan(BackupType::Incremental, &cfg_backup, config)))
+        Ok(Some(BackupJob::plan(BackupType::Incremental, &cfg_backup, config)?))
     } else {
         Ok(None)
     }
@@ -171,17 +171,24 @@ impl JobTrait for BackupJob {
     type Output = BackupJobOutput;
 
     fn run(&self) -> Result<JobOutput> {
-        Log::get().info(&format!("Began {} backup of {}", self.backup_type, self.run_name.backup_name.tik_name()));
+        log_info!("Began {} backup of {}", self.backup_type, self.run_name.backup_name.tik_name());
 
-        let mut rsync_cmd = rsync::cmd_rsync_full(&self.source_dir, &self.dest_dir);
+        let mut rsync_cmd = match self.backup_type {
+            BackupType::Full => rsync::cmd_rsync_full(&self.source_dir, &self.dest_dir),
+            BackupType::Incremental => rsync::cmd_rsync_incremental(
+                &self.source_dir,
+                &self.incremental_source_dir.as_ref().unwrap(),
+                &self.dest_dir),
+        };
+
         let output = rsync_cmd.output().unwrap();
 
         if !output.status.success() {
             return Err(Error::rsync(output));
         }
     
-        Log::get().info(&format!("Completed {} backup of {} to {}",
-            self.backup_type, self.run_name.backup_name.tik_name(), self.dest_dir.to_str().unwrap().tik_path()));
+        log_info!("Completed {} backup of {} to {}",
+            self.backup_type, self.run_name.backup_name.tik_name(), self.dest_dir.to_str().unwrap().tik_path());
 
         Ok(JobOutput::Backup(BackupJobOutput {
             backup_type: self.backup_type,
@@ -194,7 +201,7 @@ impl JobTrait for BackupJob {
 }
 
 impl BackupJob {
-    pub fn plan(backup_type: BackupType, cfg_backup: &BackupConfigBackup, config: &BackupConfig) -> JobQueueEntry {
+    pub fn plan(backup_type: BackupType, cfg_backup: &BackupConfigBackup, config: &BackupConfig) -> Result<JobQueueEntry> {
         let run_name = BackupRunName::new(datetime_now(), hostname(), username(), &cfg_backup.name);
         let source_dir = cfg_backup.source_dir_path();
         let dest_dir = config.backup_storage_dir_path()
@@ -223,9 +230,9 @@ impl BackupJob {
             JobQueueEntry::Job {
                 job: Job::Backup(BackupJob {
                     backup_type,
-                    run_name,
-                    source_dir,
-                    incremental_source_dir,
+                    run_name: run_name.clone(),
+                    source_dir: source_dir.clone(),
+                    incremental_source_dir: incremental_source_dir.clone(),
                     dest_dir, }),
                 status: JobStatus::Ready,
                 result: None
@@ -243,7 +250,59 @@ impl BackupJob {
             });
         }
 
-        JobQueueEntry::Series(series)
+        for cfg_sync in &cfg_backup.syncs {
+            for cfg_remote in cfg_sync.remotes(config) {
+                match backup_type {
+                    BackupType::Full if cfg_sync.sync_full => series.push(JobQueueEntry::Job {
+                        job: Job::SyncBackup(SyncBackupJob {
+                            remote: Remote {
+                                name: cfg_remote.name.clone(),
+                                host: cfg_remote.host.clone(),
+                                user: cfg_remote.user.clone(),
+                            },
+                            backup_type: backup_type,
+                            backup_run_name: run_name.clone(),
+                            source_dir: source_dir.clone(),
+                            remote_incremental_source_dir: None,
+                            remote_dest_dir: PathBuf::from(&cfg_remote.backup_storage_dir)
+                                .join(backup_type.subdir_name())
+                                .join(run_name.to_string()),
+
+                        }),
+                        status: JobStatus::Ready,
+                        result: None
+                    }),
+                    BackupType::Incremental if cfg_sync.sync_incremental => {
+                        let incremental_source_dirname = incremental_source_dir.as_ref().unwrap()
+                            .file_name().unwrap().to_str().unwrap();
+
+                        series.push(JobQueueEntry::Job {
+                            job: Job::SyncBackup(SyncBackupJob {
+                                remote: Remote {
+                                    name: cfg_remote.name.clone(),
+                                    host: cfg_remote.host.clone(),
+                                    user: cfg_remote.user.clone(),
+                                },
+                                backup_type: backup_type,
+                                backup_run_name: run_name.clone(),
+                                source_dir: source_dir.clone(),
+                                remote_incremental_source_dir: Some(PathBuf::from(&cfg_remote.backup_storage_dir)
+                                    .join(backup_type.subdir_name())
+                                    .join(incremental_source_dirname)),
+                                remote_dest_dir: PathBuf::from(&cfg_remote.backup_storage_dir)
+                                    .join(backup_type.subdir_name())
+                                    .join(run_name.to_string()),
+                            }),
+                            status: JobStatus::Ready,
+                            result: None
+                        });
+                    },
+                    _ => {}
+                }
+            }
+        }
+
+        Ok(JobQueueEntry::Series(series))
     }
 }
 

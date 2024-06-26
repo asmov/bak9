@@ -246,3 +246,8 @@ impl Log {
     }
 }
 
+macro_rules! log_info {
+    ($($arg:tt)*) => {
+        Log::get().info(&format!($($arg)*));
+    };
+}
