@@ -1,46 +1,40 @@
 bak9
 ================================================================================
+[![Latest Version: bak9]][crates.io:bak9]
+
+[Latest Version: bak9]: https://img.shields.io/crates/v/bak9.svg
+[crates.io:bak9]: https://crates.io/crates/bak9
+
 *Keep your $HOME safe*  
 
 Bak9 is rotational backup system for workstation users.  
 
-bak9
---------------------------------------------------------------------------------
-[![Latest Version: bak]][crates.io:bak]
-
-[Latest Version: bak]: https://img.shields.io/crates/v/bak9.svg
-[crates.io:bak]: https://crates.io/crates/bak9
-
-### Usage
+## Usage
 
 `bak9 [OPTIONS] <COMMAND>`
 
-#### Commands
+### Commands
 - `backup`   Performs backups as configured
 - `config`   Manages configuration
 - `log`      Reviews logs
 - `summary`  Reviews a summary of recent backups
 
-#### `bak9 backup` `<SUBCOMMAND> <NAME>`
+### `bak9 backup` `<SUBCOMMAND> <NAME>`
 
 `NAME`: The name of the backup configuration to operate on.
 
-##### Subcommands:
+#### Subcommands:
 - `scheduled` Performs backups as schedled
 - `full` Manually performs a full backup
 - `incremental` Manually performs an incremental backup
 
-#### `bak9 config` `<SUBCOMMAND>`
+### `bak9 config` `<SUBCOMMAND>`
 
-##### Subcommands
+#### Subcommands
 - `setup` Initializes the user's bak9 configuration
 - `edit` Opens the bak9 configuration file in their editor
 - `verify` Verifies configuration
 - `show` Displays the configuration file contents
-
-
-
-
 
 License (GPL3)
 --------------------------------------------------------------------------------

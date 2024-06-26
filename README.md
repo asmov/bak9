@@ -1,15 +1,16 @@
 bak9
 ================================================================================
 **Keep your $HOME safe:**  
-A rotational **backup** system for workstation **users**.  
+
+The bak9 suite provides a rotational backup system for workstation users.  
 
 
-bak
+[bak9](./cli/)
 --------------------------------------------------------------------------------
-[![Latest Version: bak]][crates.io:bak]
+[![Latest Version: bak9]][crates.io:bak9]
 
-[Latest Version: bak]: https://img.shields.io/crates/v/bak9.svg
-[crates.io:bak]: https://crates.io/crates/bak9
+[Latest Version: bak9]: https://img.shields.io/crates/v/bak9.svg
+[crates.io:bak9]: https://crates.io/crates/bak9
 
 ### Usage
 
@@ -17,42 +18,22 @@ bak
 
 Creates a backup `.bak` copy of **FILE**.
 
-If **DIR** is not specified, the copy is created in the same directory as FILE.
+Refer to the [bak9 project](./cli/) for more information.
 
-If DIR is specified as `-`, or if the user lacks permissions to copy to DIR, the
-user's app data directory will be used instead.
+[bak](./bak)
+--------------------------------------------------------------------------------
+[![Latest Version: bak]][crates.io:bak9-bak]
 
-If multiple backups of FILE exist, the rotating filename extension used will be: `.bak.N`
+[Latest Version: bak]: https://img.shields.io/crates/v/bak9-bak.svg
+[crates.io:bak]: https://crates.io/crates/bak9-bak
 
-The most recent rotating backup will always be `.bak.0` 
+### Usage
 
-Pruning of rotating backups occurs after `-n NUM` copies. 
+`bak [OPTIONS] FILE [DIR] [COMMAND]`
 
-If the current backup is no different than its predecessor, copying will be skipped. 
+Creates a backup `.bak` copy of **FILE**.
 
-Additional **COMMAND**s may be appended to list, compare, or delete backups.
-
-#### Options
-
-- `-n NUM`  
-Creates at most **NUM** backup files. [default: 10] 
-
-- `-q`  
-Quiet. Suppresses output.
-
-- `-f`
-Force the operation without confirmation.
-
-#### Commands
-
-- `ls`  
-Lists all backups of FILE in DIR.
-
-- `diff N`  
-Shows the differences between FILE and the specified `bak.N` backup in DIR. [default: 0]
-
-- `rm`  
-Deletes all backups of FILE in DIR.
+Refer to the [bak project](./cli/) for more information.
 
 License (GPL3)
 --------------------------------------------------------------------------------
