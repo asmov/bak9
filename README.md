@@ -20,7 +20,7 @@ Manages a rotational backup system.
 
 Refer to the [bak9 project](./cli/) for more information.
 
-[bak](./bak)
+[bak](./bak/)
 --------------------------------------------------------------------------------
 [![Latest Version: bak]][crates.io:bak9-bak]
 
@@ -33,7 +33,7 @@ Refer to the [bak9 project](./cli/) for more information.
 
 Creates an adhoc backup `.bak` copy of **FILE**.
 
-Refer to the [bak project](./cli/) for more information.
+Refer to the [bak project](./bak/) for more information.
 
 License (GPL3)
 --------------------------------------------------------------------------------
