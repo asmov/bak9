@@ -21,15 +21,73 @@ pub fn bak9_info_log_prefix() -> String {
     make_log_prefix(strings::BAK9, "", colored::Color::Green)
 }
 
+pub trait TikPath {
+    fn tik_path(&self) -> String;
+    fn tikn_path(&self) -> String;
+}
+
+impl TikPath for &std::path::Path {
+    fn tik_path(&self) -> String {
+        self.to_string_lossy().tik_path()
+    }
+
+    fn tikn_path(&self) -> String {
+        self.to_string_lossy().tikn_path()
+    }
+}
+
+impl TikPath for std::path::PathBuf {
+    fn tik_path(&self) -> String {
+        self.to_string_lossy().tik_path()
+    }
+
+    fn tikn_path(&self) -> String {
+        self.to_string_lossy().tikn_path()
+    }
+}
+
 pub trait TikColor {
     fn tik_color(&self, color: colored::Color) -> String;
+    fn tikless_color(&self, color: colored::Color) -> String;
 
     fn tik_name(&self) -> String {
         self.tik_color(colored::Color::BrightCyan)
     }
 
+    fn tikn_name(&self) -> String {
+        self.tikless_color(colored::Color::BrightCyan)
+    }
+
     fn tik_path(&self) -> String {
         self.tik_color(colored::Color::Cyan)
+    }
+
+    fn tikn_path(&self) -> String {
+        self.tikless_color(colored::Color::Cyan)
+    }
+
+    fn tikn_prompt(&self) -> String {
+        self.tikless_color(colored::Color::Magenta)
+    }
+
+    fn tikn_confirm(&self) -> String {
+        self.tikless_color(colored::Color::BrightYellow)
+    }
+
+    fn tikn_warning(&self) -> String {
+        self.tikless_color(colored::Color::Yellow)
+    }
+
+    fn tikn_error(&self) -> String {
+        self.tikless_color(colored::Color::Red)
+    }
+
+    fn tik_cmd(&self) -> String {
+        self.tik_color(colored::Color::TrueColor { r: 255, g: 140, b: 0 })
+    }
+
+    fn tikn_cmd(&self) -> String {
+        self.tik_color(colored::Color::TrueColor { r: 255, g: 140, b: 0 })
     }
 
     fn strip_tik(&self) -> String;
@@ -40,6 +98,10 @@ pub trait TikColor {
 impl TikColor for &str {
     fn tik_color(&self, color: colored::Color) -> String {
         format!("``{}``", self.color(color))
+    }
+
+    fn tikless_color(&self, color: colored::Color) -> String {
+        format!("{}", self.color(color))
     }
 
     fn strip_tik(&self) -> String {
@@ -57,12 +119,34 @@ impl TikColor for String {
         self.as_str().tik_color(color)
     }
 
+    fn tikless_color(&self, color: colored::Color) -> String {
+        self.as_str().tikless_color(color)
+    }
+
     fn strip_tik(&self) -> String {
         self.as_str().strip_tik()
     }
 
     fn strip_color(&self) -> String {
         self.as_str().strip_color()
+    }
+}
+
+impl TikColor for std::borrow::Cow<'_, str> {
+    fn tik_color(&self, color: colored::Color) -> String {
+        self.as_ref().tik_color(color)
+    }
+
+    fn tikless_color(&self, color: colored::Color) -> String {
+        self.as_ref().tikless_color(color)
+    }
+
+    fn strip_tik(&self) -> String {
+        self.as_ref().strip_tik()
+    }
+
+    fn strip_color(&self) -> String {
+        self.as_ref().strip_color()
     }
 }
 
@@ -116,6 +200,18 @@ impl Log {
         let prefix = bak9_error_log_prefix();
         let log_msg = format!("{} {}", prefix, msg);
         self.write(&log_msg);
+    }
+    
+    pub fn line(&self, msg: &str) {
+        println!("{}", msg.strip_tik());
+    }
+
+    pub fn eline(&self, msg: &str) {
+        eprintln!("{}", msg.strip_tik());
+    }
+
+    pub fn out(&self, msg: &str) {
+        print!("{}", msg.strip_tik());
     }
 
     fn write(&self, msg: &str) {

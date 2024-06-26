@@ -1,6 +1,6 @@
 use std::{io::Write, path::Path};
 use colored::Colorize;
-use crate::{error::*, config::*, cli::*, paths::*};
+use crate::{error::*, log::*, config::*, cli::*, paths::*};
 
 pub(crate) fn run_config(cli: &Cli, subcmd: &ConfigCommand) -> Result<bool> {
     let config_path = select_config_path(&cli)?;
@@ -14,12 +14,13 @@ pub(crate) fn run_config(cli: &Cli, subcmd: &ConfigCommand) -> Result<bool> {
 
 fn run_config_setup(config_path: &Path, force: bool) -> Result<bool> {
     if config_path.exists() {
-        println!("Verifying config file: {}", config_path.to_str().unwrap().cyan());
+        println!("Verifying config file: {}", config_path.tikn_path());
         return run_config_verify(config_path, true);
     }
 
     if !force {
-        println!("{} Config file not found: {}", "warning:".yellow(), config_path.to_str().unwrap().cyan());
+        println!("{} Config file not found: {}",
+            "warning:".tikn_warning(), config_path.tikn_path());
         if !confirm("Would you like to create it now?")? {
             return Ok(false);
         }
@@ -32,9 +33,9 @@ fn run_config_setup(config_path: &Path, force: bool) -> Result<bool> {
     std::fs::write(&config_path, CONFIG_DEFAULTS)
         .map_err(|e| Error::file_io(&config_path, e))?;
 
-    println!("Config file created: {}", config_path.to_str().unwrap().cyan());
+    println!("Config file created: {}", config_path.tikn_path());
     println!("Edit your config with {}\nValidate your config with {}",
-        "bak9 config edit".yellow(), "bak9 config verify".yellow());
+        "bak9 config edit".tikn_cmd(), "bak9 config verify".tikn_cmd());
 
     if confirm("Would you like to edit it now?")? {
         run_config_edit(config_path)
@@ -44,7 +45,7 @@ fn run_config_setup(config_path: &Path, force: bool) -> Result<bool> {
 }
 
 fn confirm(question: &str) -> Result<bool> {
-    print!("{} {question} {} ", "confirm:".bright_yellow(), "[y/N]:".magenta());
+    print!("{} {question} {} ", "confirm:".tikn_confirm(), "[y/N]:".tikn_prompt());
 
     std::io::stdout().flush()
         .expect("Failed to flush stdout");
@@ -60,7 +61,7 @@ fn confirm(question: &str) -> Result<bool> {
 }
 
 fn run_config_edit(config_path: &Path) -> Result<bool> {
-    println!("Launching editor for config file: {}", config_path.to_str().unwrap().cyan());
+    eprintln!("Launching editor for config file: {}", config_path.tikn_path());
 
     let output = bak9_os::run_best_editor(config_path, false)
         .map_err(|e| Error::Generic(format!("Failed to run editor :: {e}")))?
@@ -79,9 +80,9 @@ fn run_config_edit(config_path: &Path) -> Result<bool> {
 fn handle_config_file_not_found(config_path: &Path) -> bool {
     if !config_path.exists() {
         eprintln!("{} Config file not found: {}\n       Run {} to create it.",
-            "error:".red(),
-            config_path.to_str().unwrap().cyan(),
-            "bak9 config setup".yellow());
+            "error:".tikn_error(),
+            config_path.to_str().unwrap().tikn_path(),
+            "bak9 config setup".tikn_cmd());
         true
     } else {
         false
@@ -97,14 +98,13 @@ fn verify_config_file(config_path: &Path) -> Result<Option<BackupConfig>> {
     let config = match read_config(Some(config_path)) {
         Ok(config) => config,
         Err(e) => {
-            eprintln!("{} Config is invalid :: {e}", "error:".red());
+            eprintln!("{} Config is invalid :: {e}", "error:".tikn_error());
             return Ok(None);
         }
     };
 
     Ok(Some(config))
 }
-
 
 fn run_config_verify(config_path: &Path, fix: bool) -> Result<bool> {
     let config = match verify_config_file(config_path)? {
@@ -114,11 +114,11 @@ fn run_config_verify(config_path: &Path, fix: bool) -> Result<bool> {
 
 
     if let Err(e) = verify_backup_dirs(&config) {
-        let problem = if fix { "error:".red() } else { "warning:".yellow() };
+        let problem = if fix { "error:".tikn_error() } else { "warning:".tikn_warning() };
         eprintln!("{problem} Backup environment is invalid:\n  {}", e.to_string().replace(" :: ", "\n  "));
 
         if !fix {
-            eprintln!("  You may run {} to fix this.", "bak9 config setup".yellow());
+            eprintln!("  You may run {} to fix this.", "bak9 config setup".tikn_cmd());
             if confirm("Would you like to create necessary directories now?")? {
                 println!("Creating directories ...");
                 setup_backup_storage_dir(&config.backup_storage_dir_path())?;
@@ -141,11 +141,11 @@ fn run_config_show(config_path: &Path) -> Result<bool> {
         return Ok(false);
     }
 
-    let header = format!("bak9 config: {}", config_path.to_string_lossy()); 
+    let header = format!("bak9 config: {}", config_path.tikn_path()); 
     println!("{}", header.cyan());
     println!("{:=<1$}", "".cyan(), header.chars().count());
     print!("{}", std::fs::read_to_string(config_path)
-        .map_err(|e| Error::Generic(format!("Unable to read from config file: {} :: {e}", config_path.to_string_lossy().cyan())))?);
+        .map_err(|e| Error::Generic(format!("Unable to read from config file: {} :: {e}", config_path.tikn_path())))?);
 
     Ok(true)
 }
