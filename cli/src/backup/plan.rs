@@ -35,7 +35,7 @@ impl BackupJob {
                     backup_type,
                     run_name: run_name.clone(),
                     source_dir: source_dir.clone(),
-                    incremental_source_dir: incremental_source_dir.clone(),
+                    incremental_source_dir: incremental_source_dir.as_ref().map(|p| p.to_path_buf()),
                     dest_dir: dest_dir.to_path_buf(),
                 }),
                 status: JobStatus::Ready,
@@ -70,9 +70,8 @@ impl BackupJob {
                                     backup_run_name: run_name.clone(),
                                     source_dir: source_dir.clone(),
                                     remote_incremental_source_dir: None,
-                                    remote_dest_dir: PathBuf::from(&cfg_remote.backup_storage_dir)
-                                        .join(backup_type.subdir_name())
-                                        .join(&run_name),
+                                    remote_dest_dir: Bak9Path::backup(&cfg_remote.backup_storage_dir, backup_type, &run_name)
+                                        .to_path_buf()
 
                                 }),
                                 status: JobStatus::Ready,
@@ -89,10 +88,8 @@ impl BackupJob {
                                     },
                                     backup_run_name: archive_run_name.clone(),
                                     source_filepath: archive_dest_filepath.to_path_buf(),
-                                    remote_dest_filepath: PathBuf::from(&cfg_remote.backup_storage_dir)
-                                        .join(paths::BACKUP_ARCHIVE_DIRNAME)
-                                        .join(&archive_run_name)
-                                        .with_extension(paths::TAR_XZ_EXTENSION),
+                                    remote_dest_filepath: Bak9Path::archive(&cfg_remote.backup_storage_dir, &archive_run_name)
+                                        .to_path_buf()
                                 }),
                                 status: JobStatus::Ready,
                                 result: None
@@ -100,9 +97,6 @@ impl BackupJob {
                         }
                     },
                     BackupType::Incremental if cfg_sync.sync_incremental => {
-                        let incremental_source_dirname = incremental_source_dir.as_ref().unwrap()
-                            .file_name().unwrap().to_str().unwrap();
-
                         series.push(JobQueueEntry::Job {
                             job: Job::SyncBackup(SyncBackupJob {
                                 remote: Remote {
@@ -113,9 +107,7 @@ impl BackupJob {
                                 backup_type: backup_type,
                                 backup_run_name: run_name.clone(),
                                 source_dir: source_dir.clone(),
-                                remote_incremental_source_dir: Some(PathBuf::from(&cfg_remote.backup_storage_dir)
-                                    .join(backup_type.subdir_name())
-                                    .join(incremental_source_dirname)),
+                                remote_incremental_source_dir: Some(incremental_source_dir.as_ref().unwrap().to_path_buf()),
                                 remote_dest_dir: PathBuf::from(&cfg_remote.backup_storage_dir)
                                     .join(backup_type.subdir_name())
                                     .join(&run_name),
