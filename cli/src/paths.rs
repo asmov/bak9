@@ -75,7 +75,10 @@ impl Bak9Path {
     pub fn full_backup<P: AsRef<Path>>(storage_dir: P, run_name: &BackupRunName) -> Self {
         Self::FullBackup {
             storage_dir: storage_dir.as_ref().to_path_buf(),
-            path: storage_dir.as_ref().join(BACKUP_FULL_DIRNAME).join(&run_name),
+            path: storage_dir.as_ref()
+                .join(BACKUP_FULL_DIRNAME)
+                .join(format!("{}__{}", &run_name.hostname, &run_name.username))
+                .join(run_name),
             run_name: run_name.clone()
         }
     }
@@ -83,7 +86,10 @@ impl Bak9Path {
     pub fn incremental_backup<P: AsRef<Path>>(storage_dir: P, run_name: &BackupRunName) -> Self {
         Self::IncrementalBackup {
             storage_dir: storage_dir.as_ref().to_path_buf(), 
-            path: storage_dir.as_ref().join(BACKUP_INCREMENTAL_DIRNAME).join(run_name),
+            path: storage_dir.as_ref()
+                .join(BACKUP_INCREMENTAL_DIRNAME)
+                .join(format!("{}__{}", &run_name.hostname, &run_name.username))
+                .join(run_name),
             run_name: run_name.clone()
         }
     }
@@ -100,9 +106,7 @@ impl Bak9Path {
             storage_dir: storage_dir.as_ref().to_path_buf(),
             path: storage_dir.as_ref()
                 .join(&path_parts.backup_type.subdir_name())
-                .join(&path_parts.hostname)
-                .join(&path_parts.username)
-                .join(&path_parts.backup_name),
+                .join(format!("{}__{}", &path_parts.hostname, &path_parts.username)),
             path_parts,
         }
     }

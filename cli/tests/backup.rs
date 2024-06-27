@@ -102,9 +102,10 @@ mod tests {
             &config.backups[0].name,
         );
 
-        let yesterday_backup_run_dir = test.temp_dir().join("strg/backup")
-            .join(paths::BACKUP_FULL_DIRNAME)
-            .join(yesterday_run_name.to_string());
+        let yesterday_backup_run_dir = bak9::paths::Bak9Path::backup(
+            test.temp_dir().join("strg/backup"),
+            bak9::backup::BackupType::Full,
+            &yesterday_run_name);
 
         fs::rename(&backup_output.dest_dir, yesterday_backup_run_dir).unwrap();
     }

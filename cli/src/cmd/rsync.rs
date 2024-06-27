@@ -30,7 +30,7 @@ pub fn cmd_rsync_full_ssh(source_dir: &Path, host: &str, remote_user: &str, remo
     cmd
 }
 
-pub fn cmd_rsync_incremental(incremental_source_dir: &Path, source_dir: &Path, dest_dir: &Path) -> std::process::Command {
+pub fn cmd_rsync_incremental(source_dir: &Path, incremental_source_dir: &Path, dest_dir: &Path) -> std::process::Command {
     let hardlink_source = format!("{}/", incremental_source_dir.to_str().unwrap());
 
     let mut cmd = std::process::Command::new(RSYNC_CMD);

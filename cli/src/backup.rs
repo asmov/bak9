@@ -88,6 +88,7 @@ pub enum BackupType {
 pub struct BackupJob {
     pub(crate) backup_type: BackupType,
     pub(crate) run_name: BackupRunName,
+    pub(crate) backup_parent_dir: PathBuf,
     pub(crate) source_dir: PathBuf,
     pub(crate) incremental_source_dir: Option<PathBuf>,
     pub(crate) dest_dir: PathBuf,
@@ -98,6 +99,9 @@ impl JobTrait for BackupJob {
 
     fn run(&self) -> Result<JobOutput> {
         log_info!("Began {} backup of {}", self.backup_type, self.run_name.backup_name.tik_name());
+
+        fs::create_dir_all(&self.backup_parent_dir)
+            .map_err(|e| Error::file_io(&self.dest_dir, e))?;
 
         let mut rsync_cmd = match self.backup_type {
             BackupType::Full => rsync::cmd_rsync_full(&self.source_dir, &self.dest_dir),
@@ -114,7 +118,7 @@ impl JobTrait for BackupJob {
         }
     
         log_info!("Completed {} backup of {} to {}",
-            self.backup_type, self.run_name.backup_name.tik_name(), self.dest_dir.to_str().unwrap().tik_path());
+            self.backup_type, self.run_name.backup_name.tik_name(), self.dest_dir.tik_path());
 
         Ok(JobOutput::Backup(BackupJobOutput {
             backup_type: self.backup_type,
@@ -148,7 +152,7 @@ fn find_last_backup<P: AsRef<Path>>(
     let backup_dir = Bak9Path::backup_dir(&backup_storage_dir,
         BackupPathParts::new(backup_type, hostname, username, backup_name));
 
-    let mut backup_runs = fs::read_dir(&backup_dir).unwrap()
+    let mut backup_runs = fs::read_dir(&backup_dir).ok()?
         .map(|entry| entry.unwrap())
         .filter_map(|entry| {
             if !entry.metadata().is_ok_and(|metadata| metadata.is_dir()) {

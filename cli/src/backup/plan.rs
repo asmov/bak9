@@ -32,6 +32,7 @@ impl BackupJob {
         let mut series = vec![
             JobQueueEntry::Job {
                 job: Job::Backup(BackupJob {
+                    backup_parent_dir: Bak9Path::backup_dir(&bak9_storage_dir, BackupPathParts::from_run(backup_type, &run_name)).to_path_buf(),
                     backup_type,
                     run_name: run_name.clone(),
                     source_dir: source_dir.clone(),
