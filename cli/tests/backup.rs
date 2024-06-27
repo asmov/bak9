@@ -53,7 +53,7 @@ mod tests {
         }
     }
 
-    fn bak9_backup(cli: &bak9::cli::Cli, config: &bak9::config::BackupConfig) -> bak9::backup::JobResults {
+    fn bak9_backup(cli: &bak9::cli::Cli, config: &bak9::config::BackupConfig) -> bak9::job::JobResults {
         bak9::run::backup::run_backup(&cli, &bak9::cli::BackupCommand::Scheduled, Some(config))
     }
 

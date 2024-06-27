@@ -1,5 +1,5 @@
 use std::{fs, path::{PathBuf, Path}};
-use crate::{config, error::{Error, Result}};
+use crate::{backup::{BackupRunName, BackupType}, config, error::{Error, Result}};
 
 pub const HOME_CONFIG_DIR: &'static str = ".config/bak9";
 pub const BAK9_CONFIG_FILENAME: &'static str = "bak9.toml";
@@ -12,6 +12,94 @@ pub const BACKUP_LOGS_DIRNAME: &'static str = "logs";
 pub const ENV_BAK9_HOME: &'static str = "BAK9_HOME";
 
 pub const TAR_XZ_EXTENSION: &'static str = "tar.xz";
+
+pub enum Bak9Path {
+    StorageDir(PathBuf),
+    FullBackup{ storage_dir: PathBuf, run_name: BackupRunName, path: PathBuf},
+    IncrementalBackup{ storage_dir: PathBuf, run_name: BackupRunName, path: PathBuf },
+    Archive{ storage_dir: PathBuf, run_name: BackupRunName, path: PathBuf },
+    Log{ storage_dir: PathBuf, run_name: BackupRunName, path: PathBuf },
+    UserConfig{ home_dir: PathBuf, path: PathBuf},
+}
+
+impl AsRef<Path> for Bak9Path {
+    fn as_ref(&self) -> &Path {
+        self.as_path()
+    }
+}
+
+impl Bak9Path {
+    pub fn storage_dir<P: AsRef<Path>>(storage_dir: P) -> Self {
+        Self::StorageDir(storage_dir.as_ref().to_path_buf())
+    }
+
+    pub fn full_backup<P: AsRef<Path>>(storage_dir: P, run_name: &BackupRunName) -> Self {
+        Self::FullBackup {
+            storage_dir: storage_dir.as_ref().to_path_buf(),
+            path: storage_dir.as_ref().join(BACKUP_FULL_DIRNAME).join(&run_name),
+            run_name: run_name.clone()
+        }
+    }
+
+    pub fn incremental_backup<P: AsRef<Path>>(storage_dir: P, run_name: &BackupRunName) -> Self {
+        Self::IncrementalBackup {
+            storage_dir: storage_dir.as_ref().to_path_buf(), 
+            path: storage_dir.as_ref().join(BACKUP_INCREMENTAL_DIRNAME).join(run_name),
+            run_name: run_name.clone()
+        }
+    }
+
+    pub fn backup<P: AsRef<Path>>(storage_dir: P, backup_type: BackupType, run_name: &BackupRunName) -> Self {
+        match backup_type {
+            BackupType::Full => Self::full_backup(storage_dir, run_name),
+            BackupType::Incremental => Self::incremental_backup(storage_dir, run_name),
+        }
+    }
+
+    pub fn archive<P: AsRef<Path>>(storage_dir: P, run_name: &BackupRunName) -> Self {
+        Self::Archive {
+            storage_dir: storage_dir.as_ref().to_path_buf(),
+            path: storage_dir.as_ref().join(BACKUP_ARCHIVE_DIRNAME).join(&run_name),
+            run_name: run_name.clone()
+        }
+    }
+
+    pub fn log<P: AsRef<Path>>(storage_dir: P, run_name: &BackupRunName) -> Self {
+        Self::Log {
+            storage_dir: storage_dir.as_ref().to_path_buf(),
+            path: storage_dir.as_ref().join(BACKUP_LOGS_DIRNAME).join(&run_name),
+            run_name: run_name.clone()
+        }
+    }
+
+    pub fn user_config<P: AsRef<Path>>(home_dir: P) -> Self {
+        Self::UserConfig {
+            home_dir: home_dir.as_ref().to_path_buf(),
+            path: home_dir.as_ref().join(HOME_CONFIG_DIR).join(BAK9_CONFIG_FILENAME)
+        }
+    }
+
+    pub fn as_path(&self) -> &Path {
+        match self {
+            Self::StorageDir(path) => path,
+            Self::FullBackup{path, ..} => path,
+            Self::IncrementalBackup{path, ..} => path,
+            Self::Archive{path, ..} => path,
+            Self::Log{path, ..} => path,
+            Self::UserConfig{path, ..} => path,
+        }
+    }
+
+    pub fn to_path_buf(&self) -> PathBuf {
+        self.as_path().to_path_buf()
+    }
+}
+
+impl From<Bak9Path> for PathBuf {
+    fn from(value: Bak9Path) -> Self {
+        value.to_path_buf()
+    }
+}
 
 pub fn expand_path(path_str: &str) -> PathBuf {
     shellexpand::env(path_str).unwrap().to_string().into()

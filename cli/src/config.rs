@@ -1,6 +1,6 @@
 use std::{fs, path::{Path, PathBuf}, str::FromStr};
 use validator::{Validate, ValidationError};
-use crate::{cli::*, paths, Error, Result};
+use crate::{cli::*, paths::{self, Bak9Path}, Error, Result};
 
 pub const CFG_BACKUP_STORAGE_DIR: &'static str = "backup_storage_dir";
 
@@ -114,6 +114,10 @@ impl BackupConfig {
 
     pub fn backup_storage_dir_path(&self) -> PathBuf {
         paths::expand_path(&self.backup_storage_dir)
+    }
+
+    pub fn bak9_storage_dir(&self) -> Bak9Path {
+        Bak9Path::StorageDir(self.backup_storage_dir_path())
     }
 
     pub fn remote<'cfg>(&'cfg self, name: &str) -> Result<&'cfg BackupConfigRemote> {

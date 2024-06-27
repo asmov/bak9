@@ -2,7 +2,7 @@
 //! [JobPlan]. When it is time to task the job out, the [JobPlan] is used to create a [JobInput], which finalizes exactly what
 //! the Job will do.
 
-use crate::{backup::*, config::*, error::*};
+use crate::{config::*, error::*};
 
 #[derive(strum::Display, Debug)]
 #[strum(serialize_all = "snake_case")]
@@ -41,6 +41,7 @@ pub enum JobOutput {
 }
 
 pub type JobQueue = Vec<JobQueueEntry>;
+pub type JobResults = Result<Vec<JobOutput>>;
 
 pub enum JobQueueEntry {
     Job { job: Job, status: JobStatus, result: Option<Result<JobOutput>> },
