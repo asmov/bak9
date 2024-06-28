@@ -1,17 +1,20 @@
-use std::{fs, path::PathBuf};
-use crate::{error::*, job::*, backup::*, log::*, cmd::xz};
+use std::path::PathBuf;
+use crate::{error::*, paths::*, job::*, backup::*, log::*, cmd::xz};
 
 #[derive(Debug)]
 pub struct ArchiveJob {
     pub(crate) backup_run_name: BackupRunName,
     pub(crate) source_dir: PathBuf,
-    pub(crate) dest_filepath: PathBuf
+    /// Bak9Path::Archive
+    pub(crate) dest_filepath: Bak9Path,
 }
 
+#[derive(Debug)]
 pub struct ArchiveJobOutput {
     pub backup_run_name: BackupRunName,
     pub source_dir: PathBuf,
-    pub dest_filepath: PathBuf
+    /// Bak9Path::Archive
+    pub dest_filepath: Bak9Path 
 }
 
 impl JobTrait for ArchiveJob {
@@ -20,13 +23,9 @@ impl JobTrait for ArchiveJob {
     fn run(&self) -> Result<JobOutput> {
         log_info!("Began archiving {}", self.backup_run_name.backup_name.tik_name());
 
-        let dest_dir = self.dest_filepath.parent()
-            .ok_or_else(|| Error::FileIO { path: self.dest_filepath.to_str().unwrap().to_string(),
-                cause: "Unable to determine parent directory".to_string() })?;
-        fs::create_dir_all(&dest_dir)
-            .map_err(|e| Error::file_io(&dest_dir, e))?;
+        self.dest_filepath.prepare()?;
 
-        let mut tar_xz_cmd = xz::cmd_tar_xz(&self.source_dir, &self.dest_filepath);
+        let mut tar_xz_cmd = xz::cmd_tar_xz(&self.source_dir, self.dest_filepath.as_path());
         let output = tar_xz_cmd.output().unwrap();
 
         if !output.status.success() {
@@ -47,7 +46,7 @@ impl JobTrait for ArchiveJob {
 impl JobOutputTrait for ArchiveJobOutput {}
 
 impl ArchiveJobOutput {
-    pub fn new(backup_run_name: BackupRunName, source_dir: PathBuf, dest_filepath: PathBuf) -> Self {
+    pub fn new(backup_run_name: BackupRunName, source_dir: PathBuf, dest_filepath: Bak9Path) -> Self {
         Self {
             backup_run_name,
             source_dir,

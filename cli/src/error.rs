@@ -1,5 +1,6 @@
 use std::path::Path;
 use colored::Colorize;
+use crate::log::*;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -15,8 +16,9 @@ pub enum Error {
     #[error("Config file {} not found.", path.cyan())]
     ConfigFileNotFound { path: String },
 
-    #[error("File IO error: {path} :> {cause}")]
-    FileIO{ path: String, cause: String },
+    #[error("{message}: {path}{cause}", path = path.tik_path(),
+        cause = cause.as_ref().map_or("".to_string(), |c| format!(" :: {c}")))]
+    FileIO{ message: String, path: String, cause: Option<String> },
 
     #[error("Config item {} not found for schema {}", name.cyan(), schema.cyan())]
     ConfigReferenceNotFound { schema: &'static str, name: String },
@@ -59,10 +61,19 @@ impl Error {
         }
     }
 
-    pub fn file_io(path: &Path, err: impl std::error::Error) -> Self {
+    pub fn file_io(err: impl std::error::Error, path: &Path, message: &str) -> Self {
         Self::FileIO {
+            message: message.to_string(),
             path: path.to_str().unwrap().to_string(),
-            cause: err.to_string()
+            cause: Some(err.to_string())
+        }
+    }
+
+    pub fn file_io_err(path: &Path, message: &str) -> Self {
+        Self::FileIO {
+            message: message.to_string(),
+            path: path.to_str().unwrap().to_string(),
+            cause: None
         }
     }
 

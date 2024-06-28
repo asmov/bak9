@@ -4,7 +4,7 @@ mod testlib;
 mod tests {
     use std::{path::PathBuf, process, sync::OnceLock};
     use asmov_testing::{self as testing, prelude::*};
-    use bak9::paths;
+    use bak9::paths::{self, Bak9Path};
     use super::testlib::{self, TestlibModuleBuilder};
 
     const BIN_EXE: &str = env!("CARGO_BIN_EXE_bak9");
@@ -73,7 +73,7 @@ mod tests {
     }
 
     fn setup_backup_dir(test: &mut testing::Test) {
-        paths::setup_backup_storage_dir(&test.temp_dir().join("strg/backup")).unwrap();
+        Bak9Path::StorageDir(test.temp_dir().join("strg/backup")).setup().unwrap();
     }
 
     #[named]

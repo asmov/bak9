@@ -33,6 +33,7 @@ impl Job {
     }
 }
 
+#[derive(Debug)]
 pub enum JobOutput {
     Backup(crate::backup::BackupJobOutput),
     Archive(crate::archive::ArchiveJobOutput),

@@ -1,5 +1,5 @@
 use std::{fs, path::{PathBuf, Path}};
-use crate::{backup::{BackupRunName, BackupType}, config, error::{Error, Result}};
+use crate::{log::*, backup::{BackupRunName, BackupType}, config, error::*};
 
 pub const HOME_CONFIG_DIR: &'static str = ".config/bak9";
 pub const BAK9_CONFIG_FILENAME: &'static str = "bak9.toml";
@@ -67,6 +67,16 @@ impl AsRef<Path> for Bak9Path {
     }
 }
 
+impl TikPath for Bak9Path {
+    fn tik_path(&self) -> String {
+        self.as_path().tik_path()
+    }
+    
+    fn tikn_path(&self) -> String {
+        self.as_path().tikn_path()
+    }
+}
+
 impl Bak9Path {
     pub fn storage_dir<P: AsRef<Path>>(storage_dir: P) -> Self {
         Self::StorageDir(storage_dir.as_ref().to_path_buf())
@@ -77,7 +87,8 @@ impl Bak9Path {
             storage_dir: storage_dir.as_ref().to_path_buf(),
             path: storage_dir.as_ref()
                 .join(BACKUP_FULL_DIRNAME)
-                .join(format!("{}__{}", &run_name.hostname, &run_name.username))
+                .join(&run_name.hostname)
+                .join(&run_name.username)
                 .join(run_name),
             run_name: run_name.clone()
         }
@@ -88,7 +99,8 @@ impl Bak9Path {
             storage_dir: storage_dir.as_ref().to_path_buf(), 
             path: storage_dir.as_ref()
                 .join(BACKUP_INCREMENTAL_DIRNAME)
-                .join(format!("{}__{}", &run_name.hostname, &run_name.username))
+                .join(&run_name.hostname)
+                .join(&run_name.username)
                 .join(run_name),
             run_name: run_name.clone()
         }
@@ -106,7 +118,8 @@ impl Bak9Path {
             storage_dir: storage_dir.as_ref().to_path_buf(),
             path: storage_dir.as_ref()
                 .join(&path_parts.backup_type.subdir_name())
-                .join(format!("{}__{}", &path_parts.hostname, &path_parts.username)),
+                .join(&path_parts.hostname)
+                .join(&path_parts.username),
             path_parts,
         }
     }
@@ -131,6 +144,74 @@ impl Bak9Path {
         Self::UserConfig {
             home_dir: home_dir.as_ref().to_path_buf(),
             path: home_dir.as_ref().join(HOME_CONFIG_DIR).join(BAK9_CONFIG_FILENAME)
+        }
+    }
+
+    /// Performs one-time setup of a path if necessary, based on global configuration values such as `backup_storage_dir`.
+    /// This includes creating directories and setting permissions.
+    /// Currently, this only applies to [Bak9Path::StorageDir].
+    pub fn setup(&self) -> Result<()> {
+        match self {
+            Self::StorageDir(ref path) => {
+                if !path.exists() {
+                    fs::create_dir_all(path)
+                        .map_err(|e| Error::file_io(e, path, "Failed to create backup storage directory"))?;
+                }
+
+                let backup_storage_dir = path.canonicalize()
+                    .map_err(|e| Error::file_io(e, path, "Backup storage directory is not accessible"))?;
+
+                for subdir in backup_storage_subdirs(&backup_storage_dir) {
+                    fs::create_dir_all(&subdir)
+                        .map_err(|e| Error::file_io(e, &subdir, "Failed to create backup storage sub-directory"))?;
+                }
+
+                Ok(())
+            },
+            Self::UserConfig { path, .. } => {
+                if !path.exists() {
+                    let dir = path.parent()
+                        .ok_or_else(|| Error::file_io_err(path, "Unable to determine user config directory"))?;
+                    fs::create_dir_all(dir)
+                        .map_err(|e| Error::file_io(e, path, "Failed to create user config directory"))?;
+                    fs::write(path, config::CONFIG_DEFAULTS)
+                        .map_err(|e| Error::file_io(e, path, "Failed to create default user config file"))?;
+                }
+
+                Ok(())
+            },
+            _ => Ok(())
+        }
+    }
+
+    fn verify_storage_dir(storage_dir: &Path) -> Result<()> {
+        match storage_dir.exists() {
+            true => Ok(()),
+            false => Err(Error::file_io_err(storage_dir, "Backup storage directory does not exist"))
+        }
+    }
+
+    /// Performs task-based setup of a path if necessary, based on the current job's configuration item.
+    /// This includes creating directories and setting permissions.
+    /// Currently, this applies to everything but [Bak9Path::StorageDir].
+    pub fn prepare(&self) -> Result<()> {
+        match self {
+            Self::StorageDir(_) => Ok(()),
+            Self::BackupDir { storage_dir, path, .. }
+                | Self::FullBackup { storage_dir, path, .. }
+                | Self::IncrementalBackup { storage_dir, path, .. }
+                | Self::Archive { storage_dir, path, .. } =>
+            {
+                Self::verify_storage_dir(storage_dir)?;
+
+                if !path.exists() {
+                    fs::create_dir_all(path.parent().unwrap())
+                        .map_err(|e| Error::file_io(e, path, "Failed to create backup run directory"))?;
+                }
+
+                Ok(())
+            },
+            _ => Ok(())
         }
     }
     
@@ -176,7 +257,10 @@ pub fn home_dir() -> Result<PathBuf> {
         PathBuf::from(bak9_home)
     } else {
         option_env!("HOME")
-            .ok_or_else(|| Error::FileIO { path: "$HOME".to_string(), cause: "$HOME is not set".to_string() })?
+            .ok_or_else(|| Error::FileIO {
+                message: "Environment variable is not set: $HOME".to_string(),
+                path: "$HOME".to_string(),
+                cause: None})?
             .into()
     };
 
@@ -189,12 +273,12 @@ pub fn setup_home_config(force: bool) -> Result<()> {
 
     if !home_config_dir.exists() {
         fs::create_dir_all(&home_config_dir)
-            .map_err(|e| Error::file_io(&home_config_dir, e))?;
+            .map_err(|e| Error::file_io(e, &home_config_dir, "Unable to create user config directory"))?;
     }
 
     if !home_config_file.exists() || force {
         fs::write(&home_config_file, config::CONFIG_DEFAULTS)
-            .map_err(|e| Error::file_io(&home_config_file, e))?;
+            .map_err(|e| Error::file_io(e, &home_config_file, "Unable to create default user config file"))?;
     }
 
     Ok(())
@@ -207,23 +291,6 @@ pub fn backup_storage_subdirs(backup_storage_dir: &Path) -> Vec<PathBuf> {
         backup_storage_dir.join(BACKUP_INCREMENTAL_DIRNAME),
         backup_storage_dir.join(BACKUP_LOGS_DIRNAME)
     ]
-}
-
-pub fn setup_backup_storage_dir(backup_storage_dir: &Path) -> Result<()> {
-    if !backup_storage_dir.exists() {
-        fs::create_dir_all(&backup_storage_dir)
-            .map_err(|e| Error::file_io(&backup_storage_dir, e))?;
-    }
-
-    let backup_storage_dir = backup_storage_dir.canonicalize()
-        .map_err(|e| Error::file_io(&backup_storage_dir, e))?;
-
-    for subdir in backup_storage_subdirs(&backup_storage_dir) {
-        fs::create_dir_all(&subdir)
-            .map_err(|e| Error::file_io(&subdir, e))?;
-    }
-
-    Ok(())
 }
 
 pub fn verify_backup_dirs(config: &config::BackupConfig) -> Result<()> {

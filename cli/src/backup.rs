@@ -88,10 +88,10 @@ pub enum BackupType {
 pub struct BackupJob {
     pub(crate) backup_type: BackupType,
     pub(crate) run_name: BackupRunName,
-    pub(crate) backup_parent_dir: PathBuf,
     pub(crate) source_dir: PathBuf,
     pub(crate) incremental_source_dir: Option<PathBuf>,
-    pub(crate) dest_dir: PathBuf,
+    /// Bak9Path::Backup
+    pub(crate) dest_dir: Bak9Path,
 }
 
 impl JobTrait for BackupJob {
@@ -100,15 +100,14 @@ impl JobTrait for BackupJob {
     fn run(&self) -> Result<JobOutput> {
         log_info!("Began {} backup of {}", self.backup_type, self.run_name.backup_name.tik_name());
 
-        fs::create_dir_all(&self.backup_parent_dir)
-            .map_err(|e| Error::file_io(&self.dest_dir, e))?;
+        self.dest_dir.prepare()?;
 
         let mut rsync_cmd = match self.backup_type {
-            BackupType::Full => rsync::cmd_rsync_full(&self.source_dir, &self.dest_dir),
+            BackupType::Full => rsync::cmd_rsync_full(&self.source_dir, self.dest_dir.as_path()),
             BackupType::Incremental => rsync::cmd_rsync_incremental(
                 &self.source_dir,
                 &self.incremental_source_dir.as_ref().unwrap(),
-                &self.dest_dir),
+                self.dest_dir.as_path()),
         };
 
         let output = rsync_cmd.output().unwrap();
@@ -136,7 +135,8 @@ pub struct BackupJobOutput {
     pub run_name: BackupRunName,
     pub source_dir: PathBuf,
     pub incremental_source_dir: Option<PathBuf>,
-    pub dest_dir: PathBuf,
+    /// Bak9Path::Backup
+    pub dest_dir: Bak9Path,
 }
 
 impl JobOutputTrait for BackupJobOutput {}

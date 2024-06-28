@@ -1,4 +1,4 @@
-use std::{io::Write, path::Path};
+use std::{fs, io::Write, path::Path};
 use colored::Colorize;
 use crate::{error::*, log::*, config::*, cli::*, paths::*};
 
@@ -27,11 +27,11 @@ fn run_config_setup(config_path: &Path, force: bool) -> Result<bool> {
     }   
 
     let config_dir = config_path.parent()
-        .expect("Failed to get parent directory");
-    std::fs::create_dir_all(config_dir)
-        .map_err(|e| Error::file_io(config_dir, e))?;
-    std::fs::write(&config_path, CONFIG_DEFAULTS)
-        .map_err(|e| Error::file_io(&config_path, e))?;
+        .ok_or_else(|| Error::file_io_err(config_path, "Unable to determine config file parent directory"))?;
+    fs::create_dir_all(config_dir)
+        .map_err(|e| Error::file_io(e, config_dir, "Failed to create config path directories"))?;
+    fs::write(config_path, CONFIG_DEFAULTS)
+        .map_err(|e| Error::file_io(e, config_path, "Failed to write default config"))?;
 
     println!("Config file created: {}", config_path.tikn_path());
     println!("Edit your config with {}\nValidate your config with {}",
@@ -121,7 +121,7 @@ fn run_config_verify(config_path: &Path, fix: bool) -> Result<bool> {
             eprintln!("  You may run {} to fix this.", "bak9 config setup".tikn_cmd());
             if confirm("Would you like to create necessary directories now?")? {
                 println!("Creating directories ...");
-                setup_backup_storage_dir(&config.backup_storage_dir_path())?;
+                Bak9Path::StorageDir(config.backup_storage_dir_path()).setup()?;
                 println!("Re-verifying ...");
                 run_config_verify(config_path, true)
             } else {
@@ -144,7 +144,7 @@ fn run_config_show(config_path: &Path) -> Result<bool> {
     let header = format!("bak9 config: {}", config_path.tikn_path()); 
     println!("{}", header.cyan());
     println!("{:=<1$}", "".cyan(), header.chars().count());
-    print!("{}", std::fs::read_to_string(config_path)
+    print!("{}", fs::read_to_string(config_path)
         .map_err(|e| Error::Generic(format!("Unable to read from config file: {} :: {e}", config_path.tikn_path())))?);
 
     Ok(true)

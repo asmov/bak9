@@ -32,12 +32,11 @@ impl BackupJob {
         let mut series = vec![
             JobQueueEntry::Job {
                 job: Job::Backup(BackupJob {
-                    backup_parent_dir: Bak9Path::backup_dir(&bak9_storage_dir, BackupPathParts::from_run(backup_type, &run_name)).to_path_buf(),
                     backup_type,
                     run_name: run_name.clone(),
                     source_dir: source_dir.clone(),
                     incremental_source_dir: incremental_source_dir.as_ref().map(|p| p.to_path_buf()),
-                    dest_dir: dest_dir.to_path_buf(),
+                    dest_dir: dest_dir.clone(),
                 }),
                 status: JobStatus::Ready,
                 result: None
@@ -48,7 +47,7 @@ impl BackupJob {
                 job: Job::Archive(ArchiveJob {
                     backup_run_name: archive_run_name.clone(),
                     source_dir: archive_source_dir.to_path_buf(),
-                    dest_filepath: archive_dest_filepath.to_path_buf(),
+                    dest_filepath: archive_dest_filepath.clone(),
                 }),
                 status: JobStatus::Ready,
                 result: None

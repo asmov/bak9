@@ -5,7 +5,7 @@ mod tests {
     use std::{fs, vec};
     use std::os::unix::fs::PermissionsExt;
     use asmov_testing::{self as testing, prelude::*};
-    use bak9::{paths, job::*};
+    use bak9::{paths::Bak9Path, job::*};
     use super::testlib::{self, TestlibModuleBuilder};
 
     static TESTING: testing::StaticModule = testing::module(|| {
@@ -16,7 +16,7 @@ mod tests {
     });
 
     fn setup_backup_dir(test: &mut testing::Test) {
-        paths::setup_backup_storage_dir(&test.temp_dir().join("strg/backup")).unwrap();
+        Bak9Path::StorageDir(test.temp_dir().join("strg/backup")).setup().unwrap();
     }
 
     fn make_cli(_test: &testing::Test) -> bak9::cli::Cli {
@@ -76,8 +76,8 @@ mod tests {
             JobOutput::Backup(job) => job, _ => panic!() };
         assert_eq!(false, dir_diff::is_different(
             &backup_output.source_dir,
-            &backup_output.dest_dir.join(testlib::TESTUSR)).unwrap());
-        assert_eq!(true, archive_output.dest_filepath.exists());
+            &backup_output.dest_dir.as_path().join(testlib::TESTUSR)).unwrap());
+        assert_eq!(true, archive_output.dest_filepath.as_path().exists());
 
         // try running it again. it should not create a new backup for "today"
         let results = bak9_backup(&cli, &config).unwrap();
@@ -122,11 +122,11 @@ mod tests {
         let config = make_config(&test, 2);
 
         let mut results = bak9_backup(&cli, &config).unwrap();
-        assert_eq!(1, results.len());
+        assert_eq!(1, results.len(), "{:#?}", results);
         let backup_output = match results.pop().unwrap() {
             JobOutput::Backup(job) => job, _ => panic!() };
  
-        let dest_home_dir = backup_output.dest_dir.join(testlib::TESTUSR);
+        let dest_home_dir = backup_output.dest_dir.as_path().join(testlib::TESTUSR);
         assert!(!dir_diff::is_different(&backup_output.source_dir, &dest_home_dir).unwrap());
         assert!(dir_diff::is_different(&backup_output.dest_dir, &dest_home_dir).unwrap());
         assert!(dest_home_dir.join("source-2.txt").exists(),
