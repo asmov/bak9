@@ -30,7 +30,7 @@ mod tests {
             .join(format!("{}{source_num}", testlib::SOURCE_PREFIX)); 
         let output = process::Command::new(BIN_EXE)
             .args(args)
-            .env(paths::ENV_BAK9_HOME, mock_root.join(testlib::HOME_TESTUSR))
+            .env(paths::consts::ENV_BAK9_HOME, mock_root.join(testlib::HOME_TESTUSR))
             .env(testlib::ENV_BAK9_TEST_SOURCE_ROOT, &mock_root)
             .env(testlib::ENV_BAK9_TEST_TMP_DIR, test.temp_dir())
             .output()

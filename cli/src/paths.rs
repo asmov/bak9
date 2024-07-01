@@ -1,17 +1,18 @@
 use std::{fs, path::{PathBuf, Path}};
+use semver;
 use crate::{log::*, backup::{BackupRunName, BackupType}, config, error::*};
 
-pub const HOME_CONFIG_DIR: &'static str = ".config/bak9";
-pub const BAK9_CONFIG_FILENAME: &'static str = "bak9.toml";
-
-pub const BACKUP_ARCHIVE_DIRNAME: &'static str = "archive";
-pub const BACKUP_FULL_DIRNAME: &'static str = "full";
-pub const BACKUP_INCREMENTAL_DIRNAME: &'static str = "incremental";
-pub const BACKUP_LOGS_DIRNAME: &'static str = "logs";
-
-pub const ENV_BAK9_HOME: &'static str = "BAK9_HOME";
-
-pub const TAR_XZ_EXTENSION: &'static str = "tar.xz";
+pub mod consts {
+    pub const HOME_CONFIG_DIR: &'static str = ".config/bak9";
+    pub const BAK9_CONFIG_FILENAME: &'static str = "bak9.toml";
+    pub const BACKUP_ARCHIVE_DIRNAME: &'static str = "archive";
+    pub const BACKUP_FULL_DIRNAME: &'static str = "full";
+    pub const BACKUP_INCREMENTAL_DIRNAME: &'static str = "incremental";
+    pub const BACKUP_LOGS_DIRNAME: &'static str = "logs";
+    pub const BAK9_FS_VERSION_FILENAME: &'static str = ".bak9_fs_version";
+    pub const ENV_BAK9_HOME: &'static str = "BAK9_HOME";
+    pub const TAR_XZ_EXTENSION: &'static str = "tar.xz";
+}
 
 #[derive(Debug, Clone)]
 pub struct BackupPathParts {
@@ -44,8 +45,8 @@ impl BackupPathParts {
 impl BackupType {
     pub fn subdir_name(&self) -> &'static str {
         match self {
-            BackupType::Full => BACKUP_FULL_DIRNAME,
-            BackupType::Incremental => BACKUP_INCREMENTAL_DIRNAME,
+            BackupType::Full => consts::BACKUP_FULL_DIRNAME,
+            BackupType::Incremental => consts::BACKUP_INCREMENTAL_DIRNAME,
         }
     }
 }
@@ -59,6 +60,7 @@ pub enum Bak9Path {
     Archive{ storage_dir: PathBuf, run_name: BackupRunName, path: PathBuf },
     Log{ storage_dir: PathBuf, run_name: BackupRunName, path: PathBuf },
     UserConfig{ home_dir: PathBuf, path: PathBuf},
+    FileSytemVersion { storage_dir: PathBuf, path: PathBuf }
 }
 
 impl AsRef<Path> for Bak9Path {
@@ -86,7 +88,7 @@ impl Bak9Path {
         Self::FullBackup {
             storage_dir: storage_dir.as_ref().to_path_buf(),
             path: storage_dir.as_ref()
-                .join(BACKUP_FULL_DIRNAME)
+                .join(consts::BACKUP_FULL_DIRNAME)
                 .join(&run_name.hostname)
                 .join(&run_name.username)
                 .join(run_name),
@@ -98,7 +100,7 @@ impl Bak9Path {
         Self::IncrementalBackup {
             storage_dir: storage_dir.as_ref().to_path_buf(), 
             path: storage_dir.as_ref()
-                .join(BACKUP_INCREMENTAL_DIRNAME)
+                .join(consts::BACKUP_INCREMENTAL_DIRNAME)
                 .join(&run_name.hostname)
                 .join(&run_name.username)
                 .join(run_name),
@@ -127,7 +129,9 @@ impl Bak9Path {
     pub fn archive<P: AsRef<Path>>(storage_dir: P, run_name: &BackupRunName) -> Self {
         Self::Archive {
             storage_dir: storage_dir.as_ref().to_path_buf(),
-            path: storage_dir.as_ref().join(BACKUP_ARCHIVE_DIRNAME).join(&run_name).with_extension(TAR_XZ_EXTENSION),
+            path: storage_dir.as_ref().join(consts::BACKUP_ARCHIVE_DIRNAME)
+                .join(&run_name)
+                .with_extension(consts::TAR_XZ_EXTENSION),
             run_name: run_name.clone()
         }
     }
@@ -135,7 +139,7 @@ impl Bak9Path {
     pub fn log<P: AsRef<Path>>(storage_dir: P, run_name: &BackupRunName) -> Self {
         Self::Log {
             storage_dir: storage_dir.as_ref().to_path_buf(),
-            path: storage_dir.as_ref().join(BACKUP_LOGS_DIRNAME).join(&run_name),
+            path: storage_dir.as_ref().join(consts::BACKUP_LOGS_DIRNAME).join(&run_name),
             run_name: run_name.clone()
         }
     }
@@ -143,9 +147,27 @@ impl Bak9Path {
     pub fn user_config<P: AsRef<Path>>(home_dir: P) -> Self {
         Self::UserConfig {
             home_dir: home_dir.as_ref().to_path_buf(),
-            path: home_dir.as_ref().join(HOME_CONFIG_DIR).join(BAK9_CONFIG_FILENAME)
+            path: home_dir.as_ref().join(consts::HOME_CONFIG_DIR).join(consts::BAK9_CONFIG_FILENAME)
         }
     }
+
+    pub fn fs_version<P: AsRef<Path>>(storage_dir: P) -> Self {
+        Self::FileSytemVersion {
+            storage_dir: storage_dir.as_ref().to_path_buf(),
+            path: storage_dir.as_ref().join(consts::BAK9_FS_VERSION_FILENAME),
+        }
+    }
+
+    /// Reads the file system version file IF self is a [Bak9Path::FileSytemVersion].
+    pub fn read_fs_version(&self) -> Result<semver::Version> {
+        assert!(matches!(self, Bak9Path::FileSytemVersion{..}), "Invalid path type for reading file system version");
+
+        fs::read_to_string(self.as_path())
+            .map_err(|e| Error::file_io(e, self.as_path(), "Failed to read file system version file"))
+            .map(|version_str| semver::Version::parse(&version_str))?
+            .map_err(|e| Error::file_io(e, self.as_path(), "Failed to parse file system version file"))
+    }
+
 
     /// Performs one-time setup of a path if necessary, based on global configuration values such as `backup_storage_dir`.
     /// This includes creating directories and setting permissions.
@@ -166,7 +188,7 @@ impl Bak9Path {
                         .map_err(|e| Error::file_io(e, &subdir, "Failed to create backup storage sub-directory"))?;
                 }
 
-                Ok(())
+                Self::fs_version(&backup_storage_dir).setup()?;
             },
             Self::UserConfig { path, .. } => {
                 if !path.exists() {
@@ -177,11 +199,17 @@ impl Bak9Path {
                     fs::write(path, config::CONFIG_DEFAULTS)
                         .map_err(|e| Error::file_io(e, path, "Failed to create default user config file"))?;
                 }
-
-                Ok(())
             },
-            _ => Ok(())
+            Self::FileSytemVersion { path, .. } => {
+                if !path.exists() {
+                    fs::write(path, crate::consts::BAK9_FS_VERSION.to_string())
+                        .map_err(|e| Error::file_io(e, path, "Failed to create file system version file"))?;
+                }
+            },
+            _ => {}
         }
+
+        Ok(())
     }
 
     fn verify_storage_dir(storage_dir: &Path) -> Result<()> {
@@ -240,6 +268,7 @@ impl Bak9Path {
             Self::Archive{path, ..} => path,
             Self::Log{path, ..} => path,
             Self::UserConfig{path, ..} => path,
+            Self::FileSytemVersion { path, .. } => path,
         }
     }
 
@@ -259,7 +288,7 @@ pub fn expand_path(path_str: &str) -> PathBuf {
 }
  
 pub fn home_dir() -> Result<PathBuf> {
-    let home: PathBuf = if let Ok(bak9_home) = std::env::var(ENV_BAK9_HOME) {
+    let home: PathBuf = if let Ok(bak9_home) = std::env::var(consts::ENV_BAK9_HOME) {
         PathBuf::from(bak9_home)
     } else {
         option_env!("HOME")
@@ -274,8 +303,8 @@ pub fn home_dir() -> Result<PathBuf> {
 }
 
 pub fn setup_home_config(force: bool) -> Result<()> {
-    let home_config_dir = home_dir()?.join(HOME_CONFIG_DIR);
-    let home_config_file = home_config_dir.join(BAK9_CONFIG_FILENAME);
+    let home_config_dir = home_dir()?.join(consts::HOME_CONFIG_DIR);
+    let home_config_file = home_config_dir.join(consts::BAK9_CONFIG_FILENAME);
 
     if !home_config_dir.exists() {
         fs::create_dir_all(&home_config_dir)
@@ -292,21 +321,21 @@ pub fn setup_home_config(force: bool) -> Result<()> {
 
 pub fn backup_storage_subdirs(backup_storage_dir: &Path) -> Vec<PathBuf> {
     vec![
-        backup_storage_dir.join(BACKUP_ARCHIVE_DIRNAME),
-        backup_storage_dir.join(BACKUP_FULL_DIRNAME),
-        backup_storage_dir.join(BACKUP_INCREMENTAL_DIRNAME),
-        backup_storage_dir.join(BACKUP_LOGS_DIRNAME)
+        backup_storage_dir.join(consts::BACKUP_ARCHIVE_DIRNAME),
+        backup_storage_dir.join(consts::BACKUP_FULL_DIRNAME),
+        backup_storage_dir.join(consts::BACKUP_INCREMENTAL_DIRNAME),
+        backup_storage_dir.join(consts::BACKUP_LOGS_DIRNAME)
     ]
 }
 
 pub fn verify_backup_dirs(config: &config::BackupConfig) -> Result<()> {
     let backup_storage_dir = &config.backup_storage_dir_path();
     let backup_storage_dir = backup_storage_dir.canonicalize()
-        .map_err(|e| Error::configured_dir(&backup_storage_dir, config::CFG_BACKUP_STORAGE_DIR, e))?;
+        .map_err(|e| Error::configured_dir(&backup_storage_dir, config::consts::CFG_BACKUP_STORAGE_DIR, e))?;
 
     for subdir in backup_storage_subdirs(&backup_storage_dir) {
         subdir.canonicalize()
-            .map_err(|e| Error::configured_subdir(&subdir, config::CFG_BACKUP_STORAGE_DIR, e))?;
+            .map_err(|e| Error::configured_subdir(&subdir, config::consts::CFG_BACKUP_STORAGE_DIR, e))?;
     }
 
     Ok(())

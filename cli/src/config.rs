@@ -2,7 +2,9 @@ use std::{fs, path::{Path, PathBuf}, str::FromStr};
 use validator::{Validate, ValidationError};
 use crate::{cli::*, paths::{self, Bak9Path}, Error, Result};
 
-pub const CFG_BACKUP_STORAGE_DIR: &'static str = "backup_storage_dir";
+pub mod consts {
+    pub const CFG_BACKUP_STORAGE_DIR: &'static str = "backup_storage_dir";
+}
 
 macro_rules! select_config {
     ($cli:ident, $config:ident) => {
@@ -23,8 +25,8 @@ pub fn select_config_path(cli: &Cli) -> Result<PathBuf> {
 
 pub fn default_config_path() -> Result<PathBuf> {
     Ok(paths::home_dir()?
-        .join(paths::HOME_CONFIG_DIR)
-        .join(paths::BAK9_CONFIG_FILENAME))
+        .join(paths::consts::HOME_CONFIG_DIR)
+        .join(paths::consts::BAK9_CONFIG_FILENAME))
 }
 
 pub(crate) fn read_cli_config(cli: &Cli) -> Result<BackupConfig> {
@@ -107,8 +109,8 @@ impl BackupConfig {
 
     pub fn read_home() -> Result<Self> {
         let config_filepath = paths::home_dir()?
-            .join(paths::HOME_CONFIG_DIR)
-            .join(paths::BAK9_CONFIG_FILENAME);
+            .join(paths::consts::HOME_CONFIG_DIR)
+            .join(paths::consts::BAK9_CONFIG_FILENAME);
         Self::read(&config_filepath)
     }
 

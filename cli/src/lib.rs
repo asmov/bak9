@@ -16,6 +16,7 @@ pub mod sync;
 pub use error::{Error, Result};
 pub use run::run_main as run;
 
-pub mod strings {
+pub mod consts {
     pub const BAK9: &'static str = "bak9";
+    pub const BAK9_FS_VERSION: semver::Version = semver::Version::new(1, 0, 0);
 }

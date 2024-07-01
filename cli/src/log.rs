@@ -1,7 +1,7 @@
 use std::{fs, sync::OnceLock, io::Write};
 use chrono::Timelike;
 use colored::Colorize;
-use crate::{strings, config::*, schedule::*, paths, backup::*, cli::*};
+use crate::{consts, config::*, schedule::*, paths, backup::*, cli::*};
 
 fn make_log_prefix(topic: &str, prefix: Option<&str>, color: colored::Color) -> String {
     let now = chrono::Local::now();
@@ -15,11 +15,11 @@ fn make_log_prefix(topic: &str, prefix: Option<&str>, color: colored::Color) -> 
 }
 
 pub fn bak9_error_log_prefix() -> String {
-    make_log_prefix(strings::BAK9, Some("error: "), colored::Color::Red)
+    make_log_prefix(consts::BAK9, Some("error: "), colored::Color::Red)
 }
 
 pub fn bak9_info_log_prefix() -> String {
-    make_log_prefix(strings::BAK9, None, colored::Color::Green)
+    make_log_prefix(consts::BAK9, None, colored::Color::Green)
 }
 
 pub trait TikPath {
@@ -181,7 +181,7 @@ impl Log {
         if let Some(config) = config { 
             let filename = format!("{}__{}__{}.log", datetimestamp_now(), hostname(), username());
             let path = config.backup_storage_dir_path()
-                .join(paths::BACKUP_LOGS_DIRNAME)
+                .join(paths::consts::BACKUP_LOGS_DIRNAME)
                 .join(filename);
 
             match std::fs::write(&path, "") {
