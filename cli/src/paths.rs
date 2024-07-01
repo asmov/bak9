@@ -196,7 +196,6 @@ impl Bak9Path {
     /// Currently, this applies to everything but [Bak9Path::StorageDir].
     pub fn prepare(&self) -> Result<()> {
         match self {
-            Self::StorageDir(_) => Ok(()),
             Self::BackupDir { storage_dir, path, .. }
                 | Self::FullBackup { storage_dir, path, .. }
                 | Self::IncrementalBackup { storage_dir, path, .. }
@@ -205,12 +204,19 @@ impl Bak9Path {
                 Self::verify_storage_dir(storage_dir)?;
 
                 if !path.exists() {
-                    fs::create_dir_all(path.parent().unwrap())
-                        .map_err(|e| Error::file_io(e, path, "Failed to create backup run directory"))?;
+                    let dir = match self {
+                        Self::BackupDir{..} => path,
+                        _ => path.parent()
+                                .ok_or_else(|| Error::file_io_err(path, "Unable to determine user config directory"))?
+                    };
+
+                    fs::create_dir_all(dir)
+                        .map_err(|e| Error::file_io(e, dir, "Failed to create backup run directory"))?;
                 }
 
                 Ok(())
             },
+            Self::StorageDir(_) => Ok(()),
             _ => Ok(())
         }
     }

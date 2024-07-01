@@ -3,22 +3,23 @@ use chrono::Timelike;
 use colored::Colorize;
 use crate::{strings, config::*, schedule::*, paths, backup::*, cli::*};
 
-pub fn make_log_prefix(topic: &str, status: &str, color: colored::Color) -> String {
+fn make_log_prefix(topic: &str, prefix: Option<&str>, color: colored::Color) -> String {
     let now = chrono::Local::now();
-    let prefix = format!("[{:0>2}:{:0>2}:{:0>2} {topic}]{status}",
-        now.hour(),
-        now.minute(),
-        now.second());
+    let prefix = format!("[{h:0>2}:{m:0>2}:{s:0>2} {topic}] {prefix}",
+        h = now.hour(),
+        m = now.minute(),
+        s = now.second(),
+        prefix = prefix.unwrap_or(""));
 
     prefix.color(color).to_string()
 }
 
 pub fn bak9_error_log_prefix() -> String {
-    make_log_prefix(strings::BAK9, " error:", colored::Color::Red)
+    make_log_prefix(strings::BAK9, Some("error: "), colored::Color::Red)
 }
 
 pub fn bak9_info_log_prefix() -> String {
-    make_log_prefix(strings::BAK9, "", colored::Color::Green)
+    make_log_prefix(strings::BAK9, None, colored::Color::Green)
 }
 
 pub trait TikPath {
@@ -47,6 +48,8 @@ impl TikPath for std::path::PathBuf {
 }
 
 pub trait TikColor {
+    const ORANGE: colored::Color = colored::Color::TrueColor { r: 255, g: 140, b: 0 };
+
     fn tik_color(&self, color: colored::Color) -> String;
     fn tikless_color(&self, color: colored::Color) -> String;
 
@@ -83,11 +86,11 @@ pub trait TikColor {
     }
 
     fn tik_cmd(&self) -> String {
-        self.tik_color(colored::Color::TrueColor { r: 255, g: 140, b: 0 })
+        self.tik_color(Self::ORANGE)
     }
 
     fn tikn_cmd(&self) -> String {
-        self.tik_color(colored::Color::TrueColor { r: 255, g: 140, b: 0 })
+        self.tik_color(Self::ORANGE)
     }
 
     fn strip_tik(&self) -> String;

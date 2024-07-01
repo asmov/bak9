@@ -1,5 +1,4 @@
 use std::path::Path;
-use colored::Colorize;
 use crate::log::*;
 
 #[derive(Debug, thiserror::Error)]
@@ -10,29 +9,29 @@ pub enum Error {
     #[error("Config parsing error :: {cause}")]
     ConfigParse { cause: String },
 
-    #[error("Config file {} not found. Have you ran {} yet?", path.cyan(), "bak9 config".yellow())]
+    #[error("Config file {} not found. Have you ran {} yet?", path.tik_path(), "bak9 config".tik_cmd())]
     DefaultConfigFileNotFound { path: String },
 
-    #[error("Config file {} not found.", path.cyan())]
+    #[error("Config file {} not found.", path.tik_path())]
     ConfigFileNotFound { path: String },
 
     #[error("{message}: {path}{cause}", path = path.tik_path(),
         cause = cause.as_ref().map_or("".to_string(), |c| format!(" :: {c}")))]
     FileIO{ message: String, path: String, cause: Option<String> },
 
-    #[error("Config item {} not found for schema {}", name.cyan(), schema.cyan())]
+    #[error("Config item {} not found for schema {}", name.tik_name(), schema.tik_name())]
     ConfigReferenceNotFound { schema: &'static str, name: String },
 
-    #[error("Directory {} not found. (config: {})", path.cyan(), config_key.cyan())]
+    #[error("Directory {} not found. (config: {})", path.tik_path(), config_key.tik_name())]
     ConfiguredDirNotFound { path: String, config_key: String },
 
-    #[error("Subdirectory {} not found. (config: {})", path.cyan(), config_key.cyan())]
+    #[error("Subdirectory {} not found. (config: {})", path.tik_path(), config_key.tik_name())]
     ConfiguredSubdirNotFound { path: String, config_key: String },
 
-    #[error("Failed to {}: {cause}", "rsync".yellow())]
+    #[error("Failed to {}: {cause}", "rsync".tik_cmd())]
     RsyncError { cause: String },
 
-    #[error("Failed to {}: {cause}", "tar xz".yellow())]
+    #[error("Failed to {}: {cause}", "tar xz".tik_cmd())]
     TarXZError { cause: String },
 
     #[error("{0}")]
